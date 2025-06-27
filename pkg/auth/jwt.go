@@ -29,7 +29,7 @@ func (a *authService) CreateToken(user schema.UserLoginDetail) (string, error) {
 		"id":  user.ID,
 		"iss": "top-up-api",
 		"iat": time.Now().Unix(),
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
+		"exp": time.Now().Add(time.Minute * 30).Unix(),
 	})
 	tokenString, err := claims.SignedString(a.jwtSecret)
 	if err != nil {

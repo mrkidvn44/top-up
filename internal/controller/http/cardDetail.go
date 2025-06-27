@@ -3,7 +3,7 @@ package controller
 import (
 	"errors"
 	"net/http"
-	"top-up-api/internal/schema"
+	"top-up-api/internal/mapper"
 	"top-up-api/internal/service"
 	"top-up-api/pkg/logger"
 
@@ -21,6 +21,7 @@ func NewCardDetailRouter(handler *gin.RouterGroup, s service.CardDetailService, 
 	cardDetailRoutes := handler.Group("/card-detail")
 	{
 		cardDetailRoutes.GET("/:providerCode", h.GetCardDetailsByProviderCode)
+		cardDetailRoutes.GET("/", h.GetCardDetailsGroupByProvider)
 	}
 }
 
@@ -40,5 +41,24 @@ func (h *CardDetailRouter) GetCardDetailsByProviderCode(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, schema.SuccessResponse(cardDetails))
+	c.JSON(http.StatusOK, mapper.SuccessResponse(cardDetails))
+}
+
+// @Summary Get card details grouped by provider
+// @Description Get card details grouped by provider
+// @Tags card-detail
+// @Success 200 {object} top-up-api_internal_schema.CardDetailsGroupByProvider
+// @Router /card-detail [get]
+func (h *CardDetailRouter) GetCardDetailsGroupByProvider(c *gin.Context) {
+	cardDetails, err := h.service.GetCardDetailsGroupByProvider(c)
+	if err != nil {
+		h.logger.Error(errors.New("error getting card details grouped by provider"), zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if cardDetails == nil {
+		c.JSON(http.StatusOK, mapper.SuccessResponse(nil))
+		return
+	}
+	c.JSON(http.StatusOK, mapper.SuccessResponse(cardDetails))
 }

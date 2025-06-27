@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"top-up-api/internal/mapper"
 	"top-up-api/internal/repository"
 	"top-up-api/internal/schema"
 )
@@ -21,7 +22,7 @@ func (s *ProviderService) GetProviders(ctx context.Context) (*[]schema.ProviderR
 	}
 	providerResponses := make([]schema.ProviderResponse, len(*providers))
 	for i, provider := range *providers {
-		providerResponses[i] = *schema.ProviderResponseFromModel(&provider)
+		providerResponses[i] = *mapper.ProviderResponseFromModel(&provider)
 	}
 	return &providerResponses, nil
 }

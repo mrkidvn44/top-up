@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"top-up-api/internal/model"
-	"top-up-api/internal/schema"
 
 	"gorm.io/gorm"
 )
@@ -16,16 +15,12 @@ func NewCardDetailRepository(db *gorm.DB) *CardDetailRepository {
 	return &CardDetailRepository{db: db}
 }
 
-func (r *CardDetailRepository) GetCardDetailsByProviderCode(ctx context.Context, providerCode string) (*[]schema.CardDetailResponse, error) {
+func (r *CardDetailRepository) GetCardDetailsByProviderCode(ctx context.Context, providerCode string) (*[]model.CardDetail, error) {
 	var cardDetails []model.CardDetail
 	if err := r.db.WithContext(ctx).Preload("CashBack").Preload("CardPrice").Preload("Provider").Where("provider_code = ?", providerCode).Find(&cardDetails).Error; err != nil {
 		return nil, err
 	}
-	cardDetailResponses := make([]schema.CardDetailResponse, len(cardDetails))
-	for i, cardDetail := range cardDetails {
-		cardDetailResponses[i] = *schema.CardDetailResponseFromModel(cardDetail)
-	}
-	return &cardDetailResponses, nil
+	return &cardDetails, nil
 }
 
 func (r *CardDetailRepository) GetCardDetailByID(ctx context.Context, id uint) (*model.CardDetail, error) {
@@ -34,4 +29,12 @@ func (r *CardDetailRepository) GetCardDetailByID(ctx context.Context, id uint) (
 		return nil, err
 	}
 	return &cardDetail, nil
+}
+
+func (r *CardDetailRepository) GetCardDetails(ctx context.Context) (*[]model.CardDetail, error) {
+	var cardDetails []model.CardDetail
+	if err := r.db.WithContext(ctx).Preload("CashBack").Preload("CardPrice").Preload("Provider").Find(&cardDetails).Error; err != nil {
+		return nil, err
+	}
+	return &cardDetails, nil
 }

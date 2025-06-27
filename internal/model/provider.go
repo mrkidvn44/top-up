@@ -17,6 +17,7 @@ type Provider struct {
 	Name    string `json:"name" gorm:"not null;unique"`
 	LogoUrl string `json:"logo_url" gorm:"not null"`
 	Status  string `json:"status" gorm:"not null"`
+	 
 }
 
 func (Provider) TableName() string {

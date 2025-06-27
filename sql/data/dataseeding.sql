@@ -100,3 +100,6 @@ VALUES
   ('GML', 'CB2F', '50NG', NOW(), NOW()),
   ('GML', 'CB5F', '100NG', NOW(), NOW()),
   ('GML', 'CB10F', '200NG', NOW(), NOW()); 
+INSERT INTO "user" (id,created_at, updated_at, deleted_at, first_name, last_name, password, phone_number )
+VALUES
+  (1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null, 'John', 'Doe', '$2a$14$QpdzQDCUaWutaB0WPJFz..LJPffpLAdsqZv/O8xPkwk77/9nRxeFG', '0358571286')

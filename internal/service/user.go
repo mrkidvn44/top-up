@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"top-up-api/internal/mapper"
 	"top-up-api/internal/repository"
 	"top-up-api/internal/schema"
 	"top-up-api/pkg/auth"
@@ -23,7 +24,7 @@ func (s *UserService) GetUserByID(ctx context.Context, id uint) (*schema.UserPro
 	if err != nil {
 		return nil, err
 	}
-	return schema.UserProfileResponseFromModel(user), nil
+	return mapper.UserProfileResponseFromModel(user), nil
 }
 
 func (s *UserService) Login(ctx context.Context, phoneNumber string, password string) (*schema.UserLoginDetail, error) {
@@ -32,9 +33,9 @@ func (s *UserService) Login(ctx context.Context, phoneNumber string, password st
 		return nil, err
 	}
 	if !auth.CheckPasswordHash(password, user.Password) {
-		return nil, errors.New("invalid password")
+		return nil, errors.New("wrong password")
 	}
-	return schema.UserLoginDetailFromModel(user), nil
+	return mapper.UserLoginDetailFromModel(user), nil
 }
 
 func (s *UserService) CreateUser(ctx context.Context, user schema.UserCreateRequest) error {
@@ -44,7 +45,7 @@ func (s *UserService) CreateUser(ctx context.Context, user schema.UserCreateRequ
 	}
 	user.Password = hashedPassword
 
-	err = s.repo.CreateUser(ctx, schema.UserCreateRequestToModel(&user))
+	err = s.repo.CreateUser(ctx, mapper.UserCreateRequestToModel(&user))
 
 	var perr *pgconn.PgError
 	errors.As(err, &perr)
@@ -55,16 +56,4 @@ func (s *UserService) CreateUser(ctx context.Context, user schema.UserCreateRequ
 		return err
 	}
 	return nil
-}
-
-func (s *UserService) DeductBalance(ctx context.Context, userID uint, amount int) error {
-	return s.repo.DeductBalance(ctx, userID, amount)
-}
-
-func (s *UserService) AddBalance(ctx context.Context, userID uint, amount int) error {
-	return s.repo.AddBalance(ctx, userID, amount)
-}
-
-func (s *UserService) AddCashBack(ctx context.Context, userID uint, amount int) error {
-	return s.repo.AddCashBack(ctx, userID, amount)
 }

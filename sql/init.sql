@@ -7,7 +7,7 @@ BEGIN
         CREATE TYPE provider_status AS ENUM ('active','inactive');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'purchase_history_status') THEN
-        CREATE TYPE purchase_history_status AS ENUM ('pending','success','failed');
+        CREATE TYPE purchase_history_status AS ENUM ('pending','confirm','success','failed');
     END IF;
 END $$;
 

@@ -3,7 +3,7 @@ package controller
 import (
 	"errors"
 	"net/http"
-	"top-up-api/internal/schema"
+	"top-up-api/internal/mapper"
 	service "top-up-api/internal/service"
 	"top-up-api/pkg/logger"
 
@@ -37,8 +37,8 @@ func (h *ProviderRouter) GetProviders(c *gin.Context) {
 	providers, err := h.service.GetProviders(c)
 	if err != nil {
 		h.logger.Error(errors.New("error getting providers"), zap.Error(err))
-		c.JSON(http.StatusInternalServerError, schema.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
+		c.JSON(http.StatusInternalServerError, mapper.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, schema.SuccessResponse(providers))
+	c.JSON(http.StatusOK, mapper.SuccessResponse(providers))
 }

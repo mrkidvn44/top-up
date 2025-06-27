@@ -7,10 +7,18 @@ type Response struct {
 	Data    interface{} `json:"data"`
 }
 
-func SuccessResponse(data interface{}) *Response {
-	return &Response{Code: 200, Message: "success", Data: data}
+
+type PaginationResponse struct {
+	Code       int         `json:"code"`
+	Message    string      `json:"message"`
+	Error      string      `json:"error"`
+	Pagination Pagination  `json:"pagination"`
+	Data       interface{} `json:"data"`
 }
 
-func ErrorResponse(code int, message string, error string) *Response {
-	return &Response{Code: code, Message: message, Error: error}
+type Pagination struct {
+	TotalCount  int `json:"total_count"`
+	TotalPage   int `json:"total_page"`
+	CurrentPage int `json:"current_page"`
 }
+

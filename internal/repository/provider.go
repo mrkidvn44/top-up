@@ -22,3 +22,4 @@ func (r *ProviderRepository) GetProviders(ctx context.Context) (*[]model.Provide
 	}
 	return &providers, nil
 }
+

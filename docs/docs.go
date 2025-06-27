@@ -15,6 +15,23 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/card-detail": {
+            "get": {
+                "description": "Get card details grouped by provider",
+                "tags": [
+                    "card-detail"
+                ],
+                "summary": "Get card details grouped by provider",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/top-up-api_internal_schema.CardDetailsGroupByProvider"
+                        }
+                    }
+                }
+            }
+        },
         "/card-detail/{providerCode}": {
             "get": {
                 "description": "Get card details by provider code",
@@ -112,6 +129,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/order/update-status": {
+            "patch": {
+                "description": "Update order status",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "order"
+                ],
+                "parameters": [
+                    {
+                        "description": "Order update request",
+                        "name": "orderUpdateRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/top-up-api_internal_schema.OrderUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/top-up-api_internal_schema.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/provider": {
             "get": {
                 "description": "Get providers",
@@ -163,16 +213,25 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "path"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "pageSize",
+                        "in": "path"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/top-up-api_internal_model.PurchaseHistory"
-                            }
+                            "$ref": "#/definitions/top-up-api_internal_schema.PaginationResponse"
                         }
                     }
                 }
@@ -295,235 +354,31 @@ const docTemplate = `{
             "type": "object",
             "additionalProperties": {}
         },
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
-        "top-up-api_internal_model.CardDetail": {
-            "type": "object",
-            "properties": {
-                "card_price": {
-                    "$ref": "#/definitions/top-up-api_internal_model.CardPrice"
-                },
-                "card_price_code": {
-                    "type": "string"
-                },
-                "cash_back": {
-                    "$ref": "#/definitions/top-up-api_internal_model.CashBack"
-                },
-                "cash_back_code": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "provider": {
-                    "$ref": "#/definitions/top-up-api_internal_model.Provider"
-                },
-                "provider_code": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "top-up-api_internal_model.CardPrice": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "integer"
-                }
-            }
-        },
-        "top-up-api_internal_model.CashBack": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "type": {
-                    "$ref": "#/definitions/top-up-api_internal_model.CashBackType"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "integer"
-                }
-            }
-        },
-        "top-up-api_internal_model.CashBackType": {
-            "type": "string",
-            "enum": [
-                "percentage",
-                "fixed"
-            ],
-            "x-enum-varnames": [
-                "CashBackTypePercentage",
-                "CashBackTypeFixed"
-            ]
-        },
-        "top-up-api_internal_model.Provider": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "logo_url": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "top-up-api_internal_model.PurchaseHistory": {
-            "type": "object",
-            "properties": {
-                "card_detail": {
-                    "$ref": "#/definitions/top-up-api_internal_model.CardDetail"
-                },
-                "card_detail_id": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "order_id": {
-                    "type": "integer"
-                },
-                "phone_number": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/top-up-api_internal_model.PurchaseHistoryStatus"
-                },
-                "total_price": {
-                    "type": "integer"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/top-up-api_internal_model.User"
-                },
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
         "top-up-api_internal_model.PurchaseHistoryStatus": {
             "type": "string",
             "enum": [
                 "pending",
+                "confirm",
                 "success",
                 "failed"
             ],
             "x-enum-varnames": [
                 "PurchaseHistoryStatusPending",
+                "PurchaseHistoryStatusConfirm",
                 "PurchaseHistoryStatusSuccess",
                 "PurchaseHistoryStatusFailed"
             ]
         },
-        "top-up-api_internal_model.User": {
+        "top-up-api_internal_schema.CardDetailMiniatureResponse": {
             "type": "object",
             "properties": {
-                "balance": {
-                    "type": "integer"
-                },
-                "cash_back": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "first_name": {
-                    "type": "string"
+                "card_price": {
+                    "$ref": "#/definitions/top-up-api_internal_schema.CardPriceResponse"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "last_name": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "phone_number": {
-                    "type": "string"
-                },
-                "purchase_history": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/top-up-api_internal_model.PurchaseHistory"
-                    }
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
+                "provider": {}
             }
         },
         "top-up-api_internal_schema.CardDetailResponse": {
@@ -535,6 +390,23 @@ const docTemplate = `{
                 "cash_back": {},
                 "id": {
                     "type": "integer"
+                },
+                "provider": {
+                    "$ref": "#/definitions/top-up-api_internal_schema.ProviderInfo"
+                }
+            }
+        },
+        "top-up-api_internal_schema.CardDetailsGroupByProvider": {
+            "type": "object",
+            "properties": {
+                "card_details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/top-up-api_internal_schema.CardDetailMiniatureResponse"
+                    }
+                },
+                "provider": {
+                    "$ref": "#/definitions/top-up-api_internal_schema.ProviderInfo"
                 }
             }
         },
@@ -615,6 +487,63 @@ const docTemplate = `{
                 }
             }
         },
+        "top-up-api_internal_schema.OrderUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "integer"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/top-up-api_internal_model.PurchaseHistoryStatus"
+                }
+            }
+        },
+        "top-up-api_internal_schema.Pagination": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_page": {
+                    "type": "integer"
+                }
+            }
+        },
+        "top-up-api_internal_schema.PaginationResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/top-up-api_internal_schema.Pagination"
+                }
+            }
+        },
+        "top-up-api_internal_schema.ProviderInfo": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "top-up-api_internal_schema.ProviderResponse": {
             "type": "object",
             "properties": {
@@ -628,6 +557,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "top-up-api_internal_schema.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "error": {
+                    "type": "string"
+                },
+                "message": {
                     "type": "string"
                 }
             }

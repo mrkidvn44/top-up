@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"top-up-api/internal/mapper"
 	"top-up-api/internal/schema"
 	service "top-up-api/internal/service"
 	"top-up-api/pkg/auth"
@@ -50,14 +51,14 @@ func (h *UserRouter) GetUserByID(c *gin.Context) {
 	token, err := h.auth.AuthenticateService(c)
 	if err != nil {
 		h.logger.Error(err)
-		c.JSON(http.StatusUnauthorized, schema.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
+		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
 		return
 	}
 
 	userAuth, err := h.auth.GetUserFromToken(token)
 	if err != nil {
 		h.logger.Error(err)
-		c.JSON(http.StatusUnauthorized, schema.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
+		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
 		return
 	}
 
@@ -70,17 +71,17 @@ func (h *UserRouter) GetUserByID(c *gin.Context) {
 	}
 	if userAuth.ID != uint(idInt) {
 		h.logger.Error(fmt.Errorf("userAuth.ID: %v, idInt: %v", userAuth.ID, idInt))
-		c.JSON(http.StatusUnauthorized, schema.ErrorResponse(http.StatusUnauthorized, "Unauthorized", ""))
+		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", ""))
 		return
 	}
 
 	user, err := h.service.GetUserByID(c, uint(idInt))
 	if err != nil {
 		h.logger.Error(err)
-		c.JSON(http.StatusInternalServerError, schema.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
+		c.JSON(http.StatusInternalServerError, mapper.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, schema.SuccessResponse(user))
+	c.JSON(http.StatusOK, mapper.SuccessResponse(user))
 }
 
 // @Summary Login
@@ -101,7 +102,7 @@ func (h *UserRouter) Login(c *gin.Context) {
 
 	if err := h.validator.Validate(user); err != nil {
 		h.logger.Error(err)
-		c.JSON(http.StatusBadRequest, schema.ErrorResponse(http.StatusBadRequest, "Invalid request", err.Error()))
+		c.JSON(http.StatusBadRequest, mapper.ErrorResponse(http.StatusBadRequest, "Invalid request", err.Error()))
 		return
 	}
 
@@ -109,21 +110,21 @@ func (h *UserRouter) Login(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			h.logger.Error(err)
-			c.JSON(http.StatusNotFound, schema.ErrorResponse(http.StatusNotFound, "User not found", ""))
+			c.JSON(http.StatusNotFound, mapper.ErrorResponse(http.StatusNotFound, "User not found", ""))
 			return
 		}
 		h.logger.Error(err)
-		c.JSON(http.StatusInternalServerError, schema.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
+		c.JSON(http.StatusInternalServerError, mapper.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
 		return
 	}
 
 	token, err := h.auth.CreateToken(*userDetail)
 	if err != nil {
 		h.logger.Error(err)
-		c.JSON(http.StatusInternalServerError, schema.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
+		c.JSON(http.StatusInternalServerError, mapper.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, schema.SuccessResponse(gin.H{"token": token, "message": "Login successful"}))
+	c.JSON(http.StatusOK, mapper.SuccessResponse(gin.H{"token": token, "message": "Login successful"}))
 }
 
 // @Summary Create user
@@ -144,7 +145,7 @@ func (h *UserRouter) CreateUser(c *gin.Context) {
 
 	if err := h.validator.Validate(user); err != nil {
 		h.logger.Error(err)
-		c.JSON(http.StatusBadRequest, schema.ErrorResponse(http.StatusBadRequest, "Invalid request", err.Error()))
+		c.JSON(http.StatusBadRequest, mapper.ErrorResponse(http.StatusBadRequest, "Invalid request", err.Error()))
 		return
 	}
 

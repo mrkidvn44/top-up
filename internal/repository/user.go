@@ -34,15 +34,3 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id uint) (*model.User,
 func (r *UserRepository) CreateUser(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
-
-func (r *UserRepository) DeductBalance(ctx context.Context, userID uint, amount int) error {
-	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("balance", gorm.Expr("balance - ?", amount)).Error
-}
-
-func (r *UserRepository) AddBalance(ctx context.Context, userID uint, amount int) error {
-	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("balance", gorm.Expr("balance + ?", amount)).Error
-}
-
-func (r *UserRepository) AddCashBack(ctx context.Context, userID uint, amount int) error {
-	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("cash_back", gorm.Expr("cash_back + ?", amount)).Error
-}

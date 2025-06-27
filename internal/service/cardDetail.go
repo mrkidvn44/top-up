@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"top-up-api/internal/mapper"
 	"top-up-api/internal/repository"
 	"top-up-api/internal/schema"
 )
@@ -15,5 +16,31 @@ func NewCardDetailService(repo repository.CardDetailRepository) *CardDetailServi
 }
 
 func (s *CardDetailService) GetCardDetailsByProviderCode(ctx context.Context, providerCode string) (*[]schema.CardDetailResponse, error) {
-	return s.repo.GetCardDetailsByProviderCode(ctx, providerCode)
+	cardDetails, err := s.repo.GetCardDetailsByProviderCode(ctx, providerCode)
+	if err != nil {
+		return nil, err
+	}
+	if cardDetails == nil {
+		return nil, nil
+	}
+	cardDetailResponses := make([]schema.CardDetailResponse, len(*cardDetails))
+	for i, cardDetail := range *cardDetails {
+		cardDetailResponses[i] = *mapper.CardDetailResponseFromModel(cardDetail)
+	}
+	return &cardDetailResponses, nil
+}
+func (s *CardDetailService) GetCardDetailsGroupByProvider(ctx context.Context) (*[]schema.CardDetailsGroupByProvider, error) {
+	cardDetails, err := s.repo.GetCardDetails(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if cardDetails == nil {
+		return nil, nil
+	}
+	groupedDetails := mapper.CardDetailsGroupByProviderFromModel(*cardDetails)
+	if groupedDetails == nil {
+		return nil, nil
+	}
+
+	return groupedDetails, nil
 }

@@ -6,13 +6,13 @@ import (
 )
 
 type OrderConfirmRequest struct {
-	OrderID            uint                        `json:"order_id"`
-	UserID             uint                        `json:"user_id"`
-	CardDetailResponse CardDetailResponse          `json:"card_detail"`
-	TotalPrice         int                         `json:"total_price"`
-	Status             model.PurchaseHistoryStatus `json:"status"`
-	PhoneNumber        string                      `json:"phone_number"`
-	CashBackValue      int                         `json:"cash_back_value"`
+	OrderID       uint                        `json:"order_id"`
+	UserID        uint                        `json:"user_id"`
+	CardDetail    CardDetailResponse          `json:"card_detail"`
+	TotalPrice    int                         `json:"total_price"`
+	Status        model.PurchaseHistoryStatus `json:"status"`
+	PhoneNumber   string                      `json:"phone_number"`
+	CashBackValue int                         `json:"cash_back_value"`
 }
 
 type OrderRequest struct {
@@ -22,23 +22,26 @@ type OrderRequest struct {
 }
 
 type OrderResponse struct {
-	OrderID            uint                        `json:"order_id"`
-	UserID             uint                        `json:"user_id"`
-	CardDetailResponse CardDetailResponse          `json:"card_detail"`
-	TotalPrice         int                         `json:"total_price"`
-	Status             model.PurchaseHistoryStatus `json:"status"`
-	PhoneNumber        string                      `json:"phone_number"`
-	CashBackValue      int                         `json:"cash_back_value"`
+	OrderID       uint                        `json:"order_id"`
+	UserID        uint                        `json:"user_id"`
+	CardDetail    CardDetailResponse          `json:"card_detail"`
+	TotalPrice    int                         `json:"total_price"`
+	Status        model.PurchaseHistoryStatus `json:"status"`
+	PhoneNumber   string                      `json:"phone_number"`
+	CashBackValue int                         `json:"cash_back_value"`
 }
 
-func PurchaseHistoryFromOrderConfirmRequest(orderConfirmRequest OrderConfirmRequest) *model.PurchaseHistory {
-	return &model.PurchaseHistory{
-		UserID:       orderConfirmRequest.UserID,
-		CardDetailID: orderConfirmRequest.CardDetailResponse.ID,
-		PhoneNumber:  orderConfirmRequest.PhoneNumber,
-		TotalPrice:   orderConfirmRequest.TotalPrice,
-		Status:       model.PurchaseHistoryStatusPending,
-	}
+type OrderProviderRequest struct {
+	OrderID     uint   `json:"order_id"`
+	PhoneNumber string `json:"phone_number"`
+	TotalPrice  int    `json:"total_price"`
+	CardPrice   int    `json:"card_price"`
+}
+
+type OrderUpdateRequest struct {
+	OrderID     uint                        `json:"order_id"`
+	Status      model.PurchaseHistoryStatus `json:"status"`
+	PhoneNumber string                      `json:"phone_number"`
 }
 
 func (o *OrderResponse) MarshalBinary() ([]byte, error) {
@@ -53,7 +56,6 @@ func (o *OrderResponse) CompareWithOrderConfirmRequest(orderConfirmRequest Order
 	return o.OrderID == orderConfirmRequest.OrderID &&
 		o.UserID == orderConfirmRequest.UserID &&
 		o.TotalPrice == orderConfirmRequest.TotalPrice &&
-		o.Status == orderConfirmRequest.Status &&
 		o.PhoneNumber == orderConfirmRequest.PhoneNumber &&
 		o.CashBackValue == orderConfirmRequest.CashBackValue
 }

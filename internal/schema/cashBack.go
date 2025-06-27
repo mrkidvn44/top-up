@@ -25,18 +25,3 @@ func (c *CashBackPercentage) CalculateCashBack(value int) int {
 func (c *CashBackFixed) CalculateCashBack(value int) int {
 	return c.Value
 }
-
-func BindCashBack(cashBack model.CashBack) CashBackInterface {
-	if cashBack.Type == model.CashBackTypePercentage {
-		return &CashBackPercentage{
-			Type:  cashBack.Type,
-			Code:  cashBack.Code,
-			Value: cashBack.Value,
-		}
-	}
-	return &CashBackFixed{
-		Type:  model.CashBackTypeFixed,
-		Code:  cashBack.Code,
-		Value: cashBack.Value,
-	}
-}

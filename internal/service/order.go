@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,8 +18,12 @@ import (
 )
 
 const (
-	CacheTime = 30 * time.Minute
-	CacheKey  = "order_id"
+	CacheTime        = 30 * time.Minute
+	CacheKey         = "order_id"
+	CashierCreateURL = "http://localhost:8081/v1/api/order/create"
+	CashierUpdateURL = "http://localhost:8081/v1/api/order/update"
+	ProviderURL      = "http://localhost:8082/v1/api/order/"
+	CallbackURL      = "http://localhost:8080/v1/api/order/update-status"
 )
 
 type OrderService struct {
@@ -45,9 +50,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, order schema.OrderReques
 		return nil, errors.New("failed to marshal order response: " + err.Error())
 	}
 
-	go func(payload []byte) {
-		http.Post("https://mock-external-api-url", "application/json", bytes.NewBuffer(payload))
-	}(orderResponseJSON)
+	go util.SendPostRequest(CashierCreateURL, orderResponseJSON)
 
 	err = s.redisClient.Set(ctx, CacheKey+strconv.Itoa(int(orderID)), orderResponseJSON, CacheTime)
 	if err != nil {
@@ -87,9 +90,12 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 			if err != nil {
 				return err
 			}
-		} else {
-			return errors.New("order already confirmed or failed")
+			if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
+				go SendProviderRequest(&orderResponse)
+			}
+			return nil
 		}
+		return errors.New("order already confirmed or failed")
 	}
 
 	purchaseHistory := mapper.PurchaseHistoryFromOrderConfirmRequest(orderConfirmRequest)
@@ -98,16 +104,21 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 		return err
 	}
 
-	go func(req schema.OrderProviderRequest) {
-		payload, _ := json.Marshal(req)
-		http.Post("https://mock-external-api-url", "application/json", bytes.NewBuffer(payload))
-	}(schema.OrderProviderRequest{
-		OrderID:     orderConfirmRequest.OrderID,
-		PhoneNumber: orderConfirmRequest.PhoneNumber,
-		TotalPrice:  orderResponse.TotalPrice,
-		CardPrice:   orderResponse.CardDetail.CardPriceResponse.Value,
-	})
+	if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
+		go SendProviderRequest(&orderResponse)
+	}
 
+	return nil
+}
+
+func SendProviderRequest(orderResponse *schema.OrderResponse) error {
+	orderProviderRequest := mapper.OrderProviderRequestFromOrderResponse(orderResponse, CallbackURL)
+	orderProviderRequestJSON, err := json.Marshal(orderProviderRequest)
+	fmt.Print("Order Provider Request: ", string(orderProviderRequestJSON), "\n")
+	if err != nil {
+		return errors.New("failed to marshal order response: " + err.Error())
+	}
+	util.SendPostRequest(ProviderURL, orderProviderRequestJSON)
 	return nil
 }
 
@@ -124,7 +135,15 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo sc
 				"order_id": orderUpdateInfo.OrderID,
 				"status":   orderUpdateInfo.Status,
 			})
-			http.Post("https://mock-api-url", "application/json", bytes.NewBuffer(payload))
+			req, err := http.NewRequest(http.MethodPatch, CashierUpdateURL, bytes.NewBuffer(payload))
+			if err != nil {
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			_, err = http.DefaultClient.Do(req)
+			if err != nil {
+				return
+			}
 		}()
 	}
 

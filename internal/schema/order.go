@@ -36,6 +36,7 @@ type OrderProviderRequest struct {
 	PhoneNumber string `json:"phone_number"`
 	TotalPrice  int    `json:"total_price"`
 	CardPrice   int    `json:"card_price"`
+	CallBackUrl string `json:"callback_url"`
 }
 
 type OrderUpdateRequest struct {

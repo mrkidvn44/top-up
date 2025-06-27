@@ -49,12 +49,16 @@ func Run(cfg *config.Config) {
 	}
 
 	validator := validator.NewValidator()
+
 	// Middleware
 	redis := redis.NewRedis(cfg.Redis)
 	logger.Info(fmt.Sprintf("redis connected to %s", redis))
 	auth := auth.NewAuthService([]byte(cfg.JWT.Secret))
 	logger.Info(fmt.Sprintf("auth service %s", auth))
+
+	// Services
 	services := service.NewContainer(db.Database, logger, redis, auth, validator)
+
 	// HTTP Server
 	handler := gin.Default()
 	controller.NewRouter(handler, services)

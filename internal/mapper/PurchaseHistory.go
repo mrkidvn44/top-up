@@ -17,3 +17,15 @@ func PurchaseHistoryResponseFromModel(purchaseHistory *model.PurchaseHistory) *s
 		CardDetail:    *CardDetailResponseFromModel(purchaseHistory.CardDetail),
 	}
 }
+
+func PurchaseHistoryFromOrderConfirmRequest(orderConfirmRequest schema.OrderConfirmRequest) *model.PurchaseHistory {
+	return &model.PurchaseHistory{
+		UserID:        orderConfirmRequest.UserID,
+		OrderID:       orderConfirmRequest.OrderID,
+		CardDetailID:  orderConfirmRequest.CardDetail.ID,
+		PhoneNumber:   orderConfirmRequest.PhoneNumber,
+		TotalPrice:    orderConfirmRequest.TotalPrice,
+		Status:        orderConfirmRequest.Status,
+		CashBackValue: orderConfirmRequest.CashBackValue,
+	}
+}

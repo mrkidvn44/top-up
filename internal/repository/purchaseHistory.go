@@ -88,8 +88,8 @@ func (r *PurchaseHistoryRepository) UpdatePurchaseHistoryStatusWithLock(ctx cont
 		}
 
 		// Validate the status
-		if purchaseHistory.Status != model.PurchaseHistoryStatusPending {
-			return errors.New("order is not in pending status")
+		if purchaseHistory.Status != model.PurchaseHistoryStatusConfirm {
+			return errors.New("order is not confirmed")
 		}
 
 		// Update the status

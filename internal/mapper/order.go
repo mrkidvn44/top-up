@@ -5,17 +5,7 @@ import (
 	"top-up-api/internal/schema"
 )
 
-func PurchaseHistoryFromOrderConfirmRequest(orderConfirmRequest schema.OrderConfirmRequest) *model.PurchaseHistory {
-	return &model.PurchaseHistory{
-		UserID:        orderConfirmRequest.UserID,
-		OrderID:       orderConfirmRequest.OrderID,
-		CardDetailID:  orderConfirmRequest.CardDetail.ID,
-		PhoneNumber:   orderConfirmRequest.PhoneNumber,
-		TotalPrice:    orderConfirmRequest.TotalPrice,
-		Status:        model.PurchaseHistoryStatusPending,
-		CashBackValue: orderConfirmRequest.CashBackValue,
-	}
-}
+
 
 func OrderResponseFromOrderRequest(orderRequest schema.OrderRequest, cardDetail *model.CardDetail, orderID uint) *schema.OrderResponse {
 	cardDetailResponse := CardDetailResponseFromModel(*cardDetail)
@@ -30,4 +20,14 @@ func OrderResponseFromOrderRequest(orderRequest schema.OrderRequest, cardDetail 
 		CashBackValue: cardDetailResponse.CashBackInterface.CalculateCashBack(cardDetail.CardPrice.Value),
 	}
 
+}
+
+func OrderProviderRequestFromOrderResponse(orderResponse *schema.OrderResponse, callbackUrl string) *schema.OrderProviderRequest {
+	return &schema.OrderProviderRequest{
+		OrderID:     orderResponse.OrderID,
+		PhoneNumber: orderResponse.PhoneNumber,
+		TotalPrice:  orderResponse.TotalPrice,
+		CardPrice:   orderResponse.CardDetail.CardPriceResponse.Value,
+		CallBackUrl: callbackUrl,
+	}
 }

@@ -1,5 +1,8 @@
 DO $$
 BEGIN
+    DROP TYPE IF EXISTS cash_back_type CASCADE;
+    DROP TYPE IF EXISTS provider_status CASCADE;
+    DROP TYPE IF EXISTS purchase_history_status CASCADE;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'cash_back_type') THEN
         CREATE TYPE cash_back_type AS ENUM ('percentage','fixed');
     END IF;

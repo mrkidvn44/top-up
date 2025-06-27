@@ -1,0 +1,473 @@
+definitions:
+  gin.H:
+    additionalProperties: {}
+    type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  top-up-api_internal_model.CardDetail:
+    properties:
+      card_price:
+        $ref: '#/definitions/top-up-api_internal_model.CardPrice'
+      card_price_code:
+        type: string
+      cash_back:
+        $ref: '#/definitions/top-up-api_internal_model.CashBack'
+      cash_back_code:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      provider:
+        $ref: '#/definitions/top-up-api_internal_model.Provider'
+      provider_code:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  top-up-api_internal_model.CardPrice:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      updatedAt:
+        type: string
+      value:
+        type: integer
+    type: object
+  top-up-api_internal_model.CashBack:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      type:
+        $ref: '#/definitions/top-up-api_internal_model.CashBackType'
+      updatedAt:
+        type: string
+      value:
+        type: integer
+    type: object
+  top-up-api_internal_model.CashBackType:
+    enum:
+    - percentage
+    - fixed
+    type: string
+    x-enum-varnames:
+    - CashBackTypePercentage
+    - CashBackTypeFixed
+  top-up-api_internal_model.Provider:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      logo_url:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  top-up-api_internal_model.PurchaseHistory:
+    properties:
+      card_detail:
+        $ref: '#/definitions/top-up-api_internal_model.CardDetail'
+      card_detail_id:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      order_id:
+        type: integer
+      phone_number:
+        type: string
+      status:
+        $ref: '#/definitions/top-up-api_internal_model.PurchaseHistoryStatus'
+      total_price:
+        type: integer
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/top-up-api_internal_model.User'
+      user_id:
+        type: integer
+    type: object
+  top-up-api_internal_model.PurchaseHistoryStatus:
+    enum:
+    - pending
+    - success
+    - failed
+    type: string
+    x-enum-varnames:
+    - PurchaseHistoryStatusPending
+    - PurchaseHistoryStatusSuccess
+    - PurchaseHistoryStatusFailed
+  top-up-api_internal_model.User:
+    properties:
+      balance:
+        type: integer
+      cash_back:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+      purchase_history:
+        items:
+          $ref: '#/definitions/top-up-api_internal_model.PurchaseHistory'
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  top-up-api_internal_schema.CardDetailResponse:
+    properties:
+      card_price:
+        $ref: '#/definitions/top-up-api_internal_schema.CardPriceResponse'
+      cash_back: {}
+      id:
+        type: integer
+    type: object
+  top-up-api_internal_schema.CardPriceResponse:
+    properties:
+      code:
+        type: string
+      value:
+        type: integer
+    type: object
+  top-up-api_internal_schema.OrderConfirmRequest:
+    properties:
+      card_detail:
+        $ref: '#/definitions/top-up-api_internal_schema.CardDetailResponse'
+      cash_back_value:
+        type: integer
+      order_id:
+        type: integer
+      phone_number:
+        type: string
+      status:
+        $ref: '#/definitions/top-up-api_internal_model.PurchaseHistoryStatus'
+      total_price:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  top-up-api_internal_schema.OrderRequest:
+    properties:
+      card_detail_id:
+        type: integer
+      phone_number:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  top-up-api_internal_schema.OrderResponse:
+    properties:
+      card_detail:
+        $ref: '#/definitions/top-up-api_internal_schema.CardDetailResponse'
+      cash_back_value:
+        type: integer
+      order_id:
+        type: integer
+      phone_number:
+        type: string
+      status:
+        $ref: '#/definitions/top-up-api_internal_model.PurchaseHistoryStatus'
+      total_price:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  top-up-api_internal_schema.ProviderResponse:
+    properties:
+      code:
+        type: string
+      logo:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+    type: object
+  top-up-api_internal_schema.UserCreateRequest:
+    properties:
+      first_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      last_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+      phone_number:
+        maxLength: 10
+        minLength: 10
+        type: string
+    required:
+    - first_name
+    - last_name
+    - password
+    - phone_number
+    type: object
+  top-up-api_internal_schema.UserLoginDetail:
+    properties:
+      id:
+        type: integer
+      password:
+        type: string
+      phone_number:
+        type: string
+    type: object
+  top-up-api_internal_schema.UserLoginRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+      phone_number:
+        maxLength: 10
+        minLength: 10
+        type: string
+    required:
+    - password
+    - phone_number
+    type: object
+  top-up-api_internal_schema.UserProfileResponse:
+    properties:
+      balance:
+        type: integer
+      cash_back:
+        type: integer
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      phone_number:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /card-detail/{providerCode}:
+    get:
+      description: Get card details by provider code
+      parameters:
+      - description: Provider code
+        in: path
+        name: providerCode
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/top-up-api_internal_schema.CardDetailResponse'
+            type: array
+      summary: Get card details by provider code
+      tags:
+      - card-detail
+  /order/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Confirm order
+      parameters:
+      - description: Order confirm request
+        in: body
+        name: orderConfirmRequest
+        required: true
+        schema:
+          $ref: '#/definitions/top-up-api_internal_schema.OrderConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/top-up-api_internal_schema.OrderConfirmRequest'
+      summary: Confirm order
+      tags:
+      - order
+  /order/create:
+    post:
+      consumes:
+      - application/json
+      description: Create order
+      parameters:
+      - description: Order request
+        in: body
+        name: orderRequest
+        required: true
+        schema:
+          $ref: '#/definitions/top-up-api_internal_schema.OrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/top-up-api_internal_schema.OrderResponse'
+      summary: Create order
+      tags:
+      - order
+  /provider:
+    get:
+      consumes:
+      - application/json
+      description: Get providers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/top-up-api_internal_schema.ProviderResponse'
+            type: array
+      summary: Get providers
+      tags:
+      - provider
+  /purchase-history/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get purchase history
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/top-up-api_internal_model.PurchaseHistory'
+            type: array
+      security:
+      - Bearer: []
+      summary: Get purchase history
+      tags:
+      - purchase-history
+  /user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/top-up-api_internal_schema.UserProfileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/gin.H'
+      security:
+      - Bearer: []
+      summary: Get user by ID
+      tags:
+      - user
+  /user/create:
+    post:
+      consumes:
+      - application/json
+      description: Create user
+      parameters:
+      - description: User create details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/top-up-api_internal_schema.UserCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User created successfully
+          schema:
+            type: string
+      summary: Create user
+      tags:
+      - user
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: Login
+      parameters:
+      - description: User login request
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/top-up-api_internal_schema.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/top-up-api_internal_schema.UserLoginDetail'
+      summary: Login
+      tags:
+      - user
+securityDefinitions:
+  Bearer:
+    description: Enter the token with the `Bearer` prefix, e.g., `Bearer <token>`
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

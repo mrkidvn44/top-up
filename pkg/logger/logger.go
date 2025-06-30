@@ -1,8 +1,10 @@
 package logger
 
 import (
+	"io"
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -18,7 +20,7 @@ type Logger struct {
 	logger *zap.Logger
 }
 
-func New(level string) *Logger {
+func New(level string, env string) *Logger {
 	l := new(zapcore.Level)
 	switch level {
 	case "debug":
@@ -27,7 +29,6 @@ func New(level string) *Logger {
 		*l = zapcore.InfoLevel
 	case "warn":
 	}
-	env := os.Getenv("ENV")
 	config := new(zap.Config)
 	if env == "PROD" {
 		config = &zap.Config{
@@ -37,6 +38,23 @@ func New(level string) *Logger {
 			OutputPaths:      []string{"./.log/server.log"},
 			ErrorOutputPaths: []string{"./.log/server.log"},
 		}
+
+		err := os.MkdirAll("./.log", os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
+
+		file, err := os.OpenFile(
+			"./.log/server.log",
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+			0664,
+		)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+
+		gin.DefaultWriter = io.MultiWriter(os.Stdout, file)
 	} else {
 		config = &zap.Config{
 			Level:            zap.NewAtomicLevelAt(*l),

@@ -3,9 +3,8 @@ package mapper
 import (
 	"top-up-api/internal/model"
 	"top-up-api/internal/schema"
+	pb "top-up-api/proto/order"
 )
-
-
 
 func OrderResponseFromOrderRequest(orderRequest schema.OrderRequest, cardDetail *model.CardDetail, orderID uint) *schema.OrderResponse {
 	cardDetailResponse := CardDetailResponseFromModel(*cardDetail)
@@ -29,5 +28,17 @@ func OrderProviderRequestFromOrderResponse(orderResponse *schema.OrderResponse, 
 		TotalPrice:  orderResponse.TotalPrice,
 		CardPrice:   orderResponse.CardDetail.CardPriceResponse.Value,
 		CallBackUrl: callbackUrl,
+	}
+}
+
+func OrderConfirmRequestFromProto(order *pb.OrderConfirmRequest) *schema.OrderConfirmRequest {
+	return &schema.OrderConfirmRequest{
+		OrderID:       uint(order.OrderId),
+		UserID:        uint(order.UserId),
+		CardDetailID:  uint(order.CardDetailId),
+		TotalPrice:    int(order.TotalPrice),
+		Status:        model.PurchaseHistoryStatus(order.Status),
+		PhoneNumber:   order.PhoneNumber,
+		CashBackValue: int(order.CashBackValue),
 	}
 }

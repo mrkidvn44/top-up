@@ -73,6 +73,5 @@ func (a *authService) GetUserFromToken(token *jwt.Token) (*schema.UserAuthDetail
 	claims := token.Claims.(jwt.MapClaims)
 	user.PhoneNumber = claims["sub"].(string)
 	user.ID = uint(claims["id"].(float64))
-	fmt.Println(user.ID)
 	return user, nil
 }

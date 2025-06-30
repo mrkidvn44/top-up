@@ -2,89 +2,103 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"time"
-	"top-up-api/pkg/logger"
 
-	"github.com/segmentio/kafka-go"
-	"go.uber.org/zap"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-type Interface interface {
-	PublishMessage(topic string, message interface{}) error
-	SubscribeToTopic(ctx context.Context, topic string, callback func(message []byte) error) error
+type Consumer interface {
+	Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error) error
 	Close() error
 }
 
-type KafkaClient struct {
-	brokers []string
-	logger  logger.Interface
+type Producer interface {
+	Produce(ctx context.Context, topic string, key string, value interface{}) error
+	Close() error
 }
 
-func NewKafka(brokers []string, logger logger.Interface) *KafkaClient {
-	return &KafkaClient{
-		brokers: brokers,
-		logger:  logger,
-	}
+type KafkaConsumer struct {
+	consumer *kafka.Consumer
 }
 
-func (k *KafkaClient) PublishMessage(topic string, message interface{}) error {
-	jsonData, err := json.Marshal(message)
-	if err != nil {
-		k.logger.Error(errors.New("failed to marshal message: "), zap.Error(err))
-		return fmt.Errorf("failed to marshal message: %w", err)
-	}
-	conn, err := kafka.DialLeader(context.Background(), "tcp", k.brokers[0], topic, 0)
-	if err != nil {
-		k.logger.Error(errors.New("failed to dial leader: "), zap.Error(err))
-		return fmt.Errorf("failed to dial leader: %w", err)
-	}
-	defer conn.Close()
-
-	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	_, err = conn.WriteMessages(
-		kafka.Message{Value: jsonData},
-	)
-	if err != nil {
-		k.logger.Error(errors.New("failed to write message: "), zap.Error(err))
-		return fmt.Errorf("failed to write message: %w", err)
-	}
-	k.logger.Info(fmt.Sprintf("message published to topic: %s, message: %s", topic, string(jsonData)))
-	return nil
+type KafkaProducer struct {
+	producer *kafka.Producer
 }
 
-func (k *KafkaClient) SubscribeToTopic(ctx context.Context, topic string, handler func(message []byte) error) error {
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: k.brokers,
-		Topic:   topic,
-		GroupID: "top-up-api",
+func NewKafkaConsumer(brokers string, groupID string) (*KafkaConsumer, error) {
+	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers": brokers,
+		"group.id":          groupID,
+		"auto.offset.reset": "earliest",
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	defer reader.Close()
+	return &KafkaConsumer{consumer: consumer}, nil
+}
+
+func NewKafkaProducer(brokers string) (*KafkaProducer, error) {
+	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": brokers})
+	if err != nil {
+		return nil, err
+	}
+
+	return &KafkaProducer{producer: producer}, nil
+}
+func (k *KafkaConsumer) Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error) error {
+	if err := k.consumer.SubscribeTopics([]string{topic}, nil); err != nil {
+		return err
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			k.logger.Info("context done")
-			return nil
+			return ctx.Err()
 		default:
-			msg, err := reader.ReadMessage(ctx)
+			msg, err := k.consumer.ReadMessage(-1)
 			if err != nil {
-				k.logger.Error(errors.New("failed to read message: "), zap.Error(err))
-				continue
+				return err
 			}
-
-			k.logger.Info(fmt.Sprintf("message read from topic: %s, message: %s", topic, string(msg.Value)))
-			if err := handler(msg.Value); err != nil {
-				k.logger.Error(errors.New("failed to handle message: "), zap.Error(err))
-				continue
-			}
+			go handler(msg)
 		}
 	}
 }
 
-func (k *KafkaClient) Close() error {
+func (k *KafkaConsumer) Close() error {
+	if k.consumer != nil {
+		return k.consumer.Close()
+	}
+	return nil
+}
+
+func (k *KafkaProducer) Produce(ctx context.Context, topic string, key string, value interface{}) error {
+	message := &kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+		Key:            []byte(key),
+		Value:          []byte(value.(string)),
+	}
+
+	deliveryChan := make(chan kafka.Event)
+	defer close(deliveryChan)
+
+	err := k.producer.Produce(message, deliveryChan)
+	if err != nil {
+		return err
+	}
+
+	e := <-deliveryChan
+	m := e.(*kafka.Message)
+	if m.TopicPartition.Error != nil {
+		return m.TopicPartition.Error
+	}
+
+	return nil
+}
+
+func (k *KafkaProducer) Close() error {
+	if k.producer != nil {
+		k.producer.Flush(15 * 1000) // Wait for all messages to be delivered
+		k.producer.Close()
+	}
 	return nil
 }

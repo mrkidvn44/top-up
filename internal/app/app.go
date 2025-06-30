@@ -1,14 +1,16 @@
 package app
 
 import (
+	"context"
 	"fmt"
-	"io"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"top-up-api/config"
 	controller "top-up-api/internal/controller/http"
 	"top-up-api/internal/db"
+	myGrpc "top-up-api/internal/grpc"
 	"top-up-api/internal/service"
 	"top-up-api/pkg/auth"
 	"top-up-api/pkg/httpserver"
@@ -16,31 +18,13 @@ import (
 	"top-up-api/pkg/redis"
 	"top-up-api/pkg/validator"
 
+	grpc "google.golang.org/grpc"
+
 	"github.com/gin-gonic/gin"
 )
 
 func Run(cfg *config.Config) {
-	env := os.Getenv("ENV")
-	if env == "PROD" {
-		err := os.MkdirAll("./.log", os.ModePerm)
-		if err != nil {
-			panic(err)
-		}
-
-		file, err := os.OpenFile(
-			"./.log/server.log",
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
-			0664,
-		)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-
-		gin.DefaultWriter = io.MultiWriter(os.Stdout, file)
-
-	}
-	logger := logger.New(cfg.Log.Level)
+	logger := logger.New(cfg.Log.Level, cfg.Env)
 
 	//connect postgres with gorm
 	db, err := db.NewDB(cfg)
@@ -48,6 +32,12 @@ func Run(cfg *config.Config) {
 		panic(err)
 	}
 
+	lis, err := net.Listen("tcp", ":" + cfg.Grpc.Port)
+	if err != nil {
+		logger.Error(fmt.Errorf("app - Run - net.Listen: %w", err))
+		os.Exit(1)
+	}
+	// Validator
 	validator := validator.NewValidator()
 
 	// Middleware
@@ -57,7 +47,18 @@ func Run(cfg *config.Config) {
 	logger.Info(fmt.Sprintf("auth service %s", auth))
 
 	// Services
-	services := service.NewContainer(db.Database, logger, redis, auth, validator)
+	services := service.NewContainer(db.Database, logger, redis, auth, validator, cfg)
+
+	// Start Kafka consumers
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	services.StartKafkaConsumers(ctx)
+
+	// Create gRPC server
+	grpcServer := grpc.NewServer()
+	grpcServices := myGrpc.NewGRPCServiceContainer(services)
+	grpcServices.Register(grpcServer)
+	go grpcServer.Serve(lis)
 
 	// HTTP Server
 	handler := gin.Default()

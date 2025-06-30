@@ -9,12 +9,16 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
 	"top-up-api/internal/mapper"
 	"top-up-api/internal/model"
 	"top-up-api/internal/repository"
 	"top-up-api/internal/schema"
+	kfk "top-up-api/pkg/kafka"
 	"top-up-api/pkg/redis"
 	"top-up-api/pkg/util"
+
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 const (
@@ -27,13 +31,24 @@ const (
 )
 
 type OrderService struct {
-	cardDetailRepo      repository.CardDetailRepository
-	purchaseHistoryRepo repository.PurchaseHistoryRepository
-	redisClient         redis.Interface
+	cardDetailRepo       repository.CardDetailRepository
+	purchaseHistoryRepo  repository.PurchaseHistoryRepository
+	redisClient          redis.Interface
+	orderConfirmConsumer kfk.Consumer
 }
 
-func NewOrderService(cardDetailRepo repository.CardDetailRepository, purchaseHistoryRepo repository.PurchaseHistoryRepository, redisClient redis.Interface) *OrderService {
-	return &OrderService{cardDetailRepo: cardDetailRepo, purchaseHistoryRepo: purchaseHistoryRepo, redisClient: redisClient}
+func NewOrderService(
+	cardDetailRepo repository.CardDetailRepository,
+	purchaseHistoryRepo repository.PurchaseHistoryRepository,
+	redisClient redis.Interface,
+	orderConfirmConsumer kfk.Consumer,
+) *OrderService {
+	return &OrderService{
+		cardDetailRepo:       cardDetailRepo,
+		purchaseHistoryRepo:  purchaseHistoryRepo,
+		redisClient:          redisClient,
+		orderConfirmConsumer: orderConfirmConsumer,
+	}
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error) {
@@ -50,12 +65,13 @@ func (s *OrderService) CreateOrder(ctx context.Context, order schema.OrderReques
 		return nil, errors.New("failed to marshal order response: " + err.Error())
 	}
 
-	go util.SendPostRequest(CashierCreateURL, orderResponseJSON)
-
 	err = s.redisClient.Set(ctx, CacheKey+strconv.Itoa(int(orderID)), orderResponseJSON, CacheTime)
 	if err != nil {
 		return nil, err
 	}
+
+	go util.SendPostRequest(CashierCreateURL, orderResponseJSON)
+
 	return orderResponse, nil
 }
 
@@ -114,7 +130,7 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 func SendProviderRequest(orderResponse *schema.OrderResponse) error {
 	orderProviderRequest := mapper.OrderProviderRequestFromOrderResponse(orderResponse, CallbackURL)
 	orderProviderRequestJSON, err := json.Marshal(orderProviderRequest)
-	fmt.Print("Order Provider Request: ", string(orderProviderRequestJSON), "\n")
+
 	if err != nil {
 		return errors.New("failed to marshal order response: " + err.Error())
 	}
@@ -147,5 +163,22 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo sc
 		}()
 	}
 
+	return nil
+}
+
+func (s *OrderService) StartOrderConfirmConsumer(ctx context.Context, topic, groupID string) error {
+	if err := s.orderConfirmConsumer.Consume(ctx, topic, groupID, func(msg *kafka.Message) error {
+		var orderConfirmRequest schema.OrderConfirmRequest
+		if err := json.Unmarshal(msg.Value, &orderConfirmRequest); err != nil {
+			fmt.Printf("failed to unmarshal order confirm event: %v \n", err)
+			return nil
+		}
+		if err := s.ConfirmOrder(ctx, orderConfirmRequest); err != nil {
+			fmt.Printf("failed to process confirm event: %v \n", err)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to start order confirm consumer: %w", err)
+	}
 	return nil
 }

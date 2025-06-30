@@ -22,7 +22,7 @@ func PurchaseHistoryFromOrderConfirmRequest(orderConfirmRequest schema.OrderConf
 	return &model.PurchaseHistory{
 		UserID:        orderConfirmRequest.UserID,
 		OrderID:       orderConfirmRequest.OrderID,
-		CardDetailID:  orderConfirmRequest.CardDetail.ID,
+		CardDetailID:  orderConfirmRequest.CardDetailID,
 		PhoneNumber:   orderConfirmRequest.PhoneNumber,
 		TotalPrice:    orderConfirmRequest.TotalPrice,
 		Status:        orderConfirmRequest.Status,

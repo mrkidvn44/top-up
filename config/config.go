@@ -16,6 +16,8 @@ type (
 		Postgres `mapstructure:"postgres"`
 		Redis    `mapstructure:"redis"`
 		JWT      `mapstructure:"jwt"`
+		Kafka    `mapstructure:"kafka"`
+		Grpc     `mapstructure:"grpc"`
 	}
 
 	// App -.
@@ -52,8 +54,26 @@ type (
 		DB       int    `mapstructure:"db"`
 	}
 
+	// Kafka -.
 	JWT struct {
 		Secret string `mapstructure:"secret"`
+	}
+
+	// Kafka -.
+	Kafka struct {
+		Brokers    string `mapstructure:"broker"`
+		GroupID    string `mapstructure:"group_id"`
+		OrderGroup `mapstructure:"order_group"`
+	}
+
+	//Order group-.
+	OrderGroup struct {
+		ConfirmTopic string `mapstructure:"confirm_topic"`
+		GroupID      string `mapstructure:"group_id"`
+	}
+
+	Grpc struct {
+		Port string `mapstructure:"port"`
 	}
 )
 

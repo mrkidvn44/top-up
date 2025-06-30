@@ -8,7 +8,7 @@ import (
 type OrderConfirmRequest struct {
 	OrderID       uint                        `json:"order_id"`
 	UserID        uint                        `json:"user_id"`
-	CardDetail    CardDetailResponse          `json:"card_detail"`
+	CardDetailID  uint                        `json:"card_detail_id"`
 	TotalPrice    int                         `json:"total_price"`
 	Status        model.PurchaseHistoryStatus `json:"status"`
 	PhoneNumber   string                      `json:"phone_number"`
@@ -59,12 +59,4 @@ func (o *OrderResponse) CompareWithOrderConfirmRequest(orderConfirmRequest Order
 		o.TotalPrice == orderConfirmRequest.TotalPrice &&
 		o.PhoneNumber == orderConfirmRequest.PhoneNumber &&
 		o.CashBackValue == orderConfirmRequest.CashBackValue
-}
-
-func (o *OrderConfirmRequest) UnmarshalJSON(data []byte) error {
-	type alias OrderConfirmRequest
-	if err := json.Unmarshal(data, (*alias)(o)); err != nil {
-		return err
-	}
-	return nil
 }

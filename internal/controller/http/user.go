@@ -2,9 +2,7 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
-	"strconv"
 	"top-up-api/internal/mapper"
 	"top-up-api/internal/schema"
 	service "top-up-api/internal/service"
@@ -18,14 +16,14 @@ import (
 )
 
 type UserRouter struct {
-	service   service.UserService
+	service   service.IUserService
 	logger    logger.Interface
 	redis     redis.Interface
 	auth      auth.Interface
 	validator validator.Interface
 }
 
-func NewUserRouter(handler *gin.RouterGroup, service service.UserService, l logger.Interface, r redis.Interface, a auth.Interface, v validator.Interface) {
+func NewUserRouter(handler *gin.RouterGroup, service service.IUserService, l logger.Interface, r redis.Interface, a auth.Interface, v validator.Interface) {
 	h := &UserRouter{service: service, logger: l, redis: r, auth: a, validator: v}
 	UserRoutes := handler.Group("/user")
 	{
@@ -55,27 +53,14 @@ func (h *UserRouter) GetUserByID(c *gin.Context) {
 		return
 	}
 
-	userAuth, err := h.auth.GetUserFromToken(token)
+	userID, err := h.auth.ValidateUserIDFromToken(token, c.Param("id"))
 	if err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
 		return
 	}
 
-	id := c.Param("id")
-	idInt, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		h.logger.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-		return
-	}
-	if userAuth.ID != uint(idInt) {
-		h.logger.Error(fmt.Errorf("userAuth.ID: %v, idInt: %v", userAuth.ID, idInt))
-		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", ""))
-		return
-	}
-
-	user, err := h.service.GetUserByID(c, uint(idInt))
+	user, err := h.service.GetUserByID(c, userID)
 	if err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusInternalServerError, mapper.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error()))
@@ -90,10 +75,10 @@ func (h *UserRouter) GetUserByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param user body top-up-api_internal_schema.UserLoginRequest true "User login request"
-// @Success 200 {object} top-up-api_internal_schema.UserLoginDetail
+// @Success 200 {object} top-up-api_internal_schema.Response
 // @Router /user/login [post]
 func (h *UserRouter) Login(c *gin.Context) {
-	var user schema.UserLoginDetail
+	var user schema.UserLoginRequest
 	if err := c.ShouldBindJSON(&user); err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

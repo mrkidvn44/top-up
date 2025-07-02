@@ -24,6 +24,7 @@ type Interface interface {
 	Del(ctx context.Context, key string) error
 	GetLock(ctx context.Context, key string) bool
 	ReleaseLock(ctx context.Context, key string) error
+	TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error
 }
 
 func NewRedis(cfg config.Redis) *RedisClient {
@@ -56,3 +57,20 @@ func (r *RedisClient) ReleaseLock(ctx context.Context, key string) error {
 	encodeKey := "lock:" + key
 	return r.Client.Del(ctx, encodeKey).Err()
 }
+
+// TryAcquireLock tries to acquire a lock for the given key within the specified timeout duration.
+// Returns nil if lock acquired, otherwise returns error if timed out.
+func (r *RedisClient) TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error {
+	expireTime := time.Now().Add(timeout)
+	for {
+		if ok := r.GetLock(ctx, key); ok {
+			return nil
+		}
+		if time.Now().After(expireTime) {
+			return context.DeadlineExceeded
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// ...existing code...

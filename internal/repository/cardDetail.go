@@ -7,6 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+type ICardDetailRepository interface {
+	GetCardDetailsByProviderCode(ctx context.Context, providerCode string) (*[]model.CardDetail, error)
+	GetCardDetailByID(ctx context.Context, id uint) (*model.CardDetail, error)
+	GetCardDetails(ctx context.Context) (*[]model.CardDetail, error)
+}
+
 type CardDetailRepository struct {
 	db *gorm.DB
 }

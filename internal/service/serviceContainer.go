@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"top-up-api/config"
 	"top-up-api/internal/repository"
@@ -32,6 +33,9 @@ type Container struct {
 	CardDetailService      *CardDetailService
 	PurchaseHistoryService *PurchaseHistoryService
 	OrderService           *OrderService
+
+	// Kafka
+	OrderKafkaConsumer kfk.Consumer
 }
 
 // NewContainer creates and initializes all dependencies
@@ -57,11 +61,11 @@ func NewContainer(
 	purchaseHistoryRepository := repository.NewPurchaseHistoryRepository(database)
 
 	// Initialize services
-	userService := NewUserService(*userRepository)
-	providerService := NewProviderService(*providerRepository)
-	cardDetailService := NewCardDetailService(*cardDetailRepository)
-	purchaseHistoryService := NewPurchaseHistoryService(*purchaseHistoryRepository)
-	orderService := NewOrderService(*cardDetailRepository, *purchaseHistoryRepository, redis, orderKafkaConsumer)
+	userService := NewUserService(userRepository)
+	providerService := NewProviderService(providerRepository)
+	cardDetailService := NewCardDetailService(cardDetailRepository)
+	purchaseHistoryService := NewPurchaseHistoryService(purchaseHistoryRepository)
+	orderService := NewOrderService(cardDetailRepository, purchaseHistoryRepository, redis, orderKafkaConsumer)
 
 	return &Container{
 		// Config
@@ -79,6 +83,9 @@ func NewContainer(
 		CardDetailService:      cardDetailService,
 		PurchaseHistoryService: purchaseHistoryService,
 		OrderService:           orderService,
+
+		//Kafka
+		OrderKafkaConsumer: orderKafkaConsumer,
 	}
 }
 
@@ -93,4 +100,16 @@ func (c *Container) StartKafkaConsumers(ctx context.Context) {
 	}()
 
 	c.Logger.Info("All service Kafka consumers started successfully")
+}
+
+func (c *Container) CloseKafka() error {
+	var errs []error
+
+	if c.OrderKafkaConsumer != nil {
+		if err := c.OrderKafkaConsumer.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
 }

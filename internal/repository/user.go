@@ -7,6 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+type IUserRepository interface {
+	GetUserByPhoneNumber(phoneNumber string) (*model.User, error)
+	GetUserByID(ctx context.Context, id uint) (*model.User, error)
+	CreateUser(ctx context.Context, user *model.User) error
+}
+
 type UserRepository struct {
 	db *gorm.DB
 }

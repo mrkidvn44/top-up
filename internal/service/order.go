@@ -19,9 +19,11 @@ import (
 	"top-up-api/pkg/util"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"gorm.io/gorm"
 )
 
 const (
+	LockTimeOut      = 5 * time.Minute
 	CacheTime        = 30 * time.Minute
 	CacheKey         = "order_id"
 	CashierCreateURL = "http://localhost:8081/v1/api/order/create"
@@ -30,16 +32,23 @@ const (
 	CallbackURL      = "http://localhost:8080/v1/api/order/update-status"
 )
 
+type IOrderService interface {
+	CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error)
+	ConfirmOrder(ctx context.Context, orderConfirmRequest schema.OrderConfirmRequest) error
+	UpdateOrderStatus(ctx context.Context, orderUpdateInfo schema.OrderUpdateRequest) error
+	StartOrderConfirmConsumer(ctx context.Context, topic, groupID string) error
+}
+
 type OrderService struct {
-	cardDetailRepo       repository.CardDetailRepository
-	purchaseHistoryRepo  repository.PurchaseHistoryRepository
+	cardDetailRepo       repository.ICardDetailRepository
+	purchaseHistoryRepo  repository.IPurchaseHistoryRepository
 	redisClient          redis.Interface
 	orderConfirmConsumer kfk.Consumer
 }
 
 func NewOrderService(
-	cardDetailRepo repository.CardDetailRepository,
-	purchaseHistoryRepo repository.PurchaseHistoryRepository,
+	cardDetailRepo repository.ICardDetailRepository,
+	purchaseHistoryRepo repository.IPurchaseHistoryRepository,
 	redisClient redis.Interface,
 	orderConfirmConsumer kfk.Consumer,
 ) *OrderService {
@@ -54,6 +63,9 @@ func NewOrderService(
 func (s *OrderService) CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error) {
 	cardDetail, err := s.cardDetailRepo.GetCardDetailByID(ctx, order.CardDetailID)
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("card detail not found")
+		}
 		return nil, err
 	}
 
@@ -85,82 +97,71 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 	}
 	defer s.redisClient.ReleaseLock(ctx, orderID)
 
-	order, err := s.redisClient.Get(ctx, CacheKey+strconv.Itoa(int(orderConfirmRequest.OrderID)))
-	if err != nil {
-		return errors.New("order not found or expired")
-	}
+	cacheKey := CacheKey + orderID
 
-	var orderResponse schema.OrderResponse
-	err = json.Unmarshal([]byte(order), &orderResponse)
+	orderResponse, err := s.getCachedOrder(ctx, cacheKey)
 	if err != nil {
-		return errors.New("failed to unmarshal order: " + err.Error())
+		return err
 	}
 	if !orderResponse.CompareWithOrderConfirmRequest(orderConfirmRequest) {
 		return errors.New("order mismatch")
 	}
 
-	storedOrder, err := s.purchaseHistoryRepo.GetPurchaseHistoryByOrderID(ctx, orderConfirmRequest.OrderID)
-	if err == nil {
-		if storedOrder.Status == model.PurchaseHistoryStatusPending {
-			err = s.purchaseHistoryRepo.UpdatePurchaseHistoryStatusByOrderID(ctx, orderConfirmRequest.OrderID, orderConfirmRequest.Status)
-			if err != nil {
-				return err
-			}
-			if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
-				go SendProviderRequest(&orderResponse)
-			}
-			return nil
-		}
+	if orderResponse.Status != model.PurchaseHistoryStatusPending {
 		return errors.New("order already confirmed or failed")
 	}
-
+	
 	purchaseHistory := mapper.PurchaseHistoryFromOrderConfirmRequest(orderConfirmRequest)
 	err = s.purchaseHistoryRepo.CreatePurchaseHistory(ctx, purchaseHistory)
 	if err != nil {
 		return err
 	}
 
-	if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
-		go SendProviderRequest(&orderResponse)
-	}
-
-	return nil
-}
-
-func SendProviderRequest(orderResponse *schema.OrderResponse) error {
-	orderProviderRequest := mapper.OrderProviderRequestFromOrderResponse(orderResponse, CallbackURL)
-	orderProviderRequestJSON, err := json.Marshal(orderProviderRequest)
-
+	orderResponse.Status = orderConfirmRequest.Status
+	err = s.updateCacheOrderStaus(ctx, cacheKey, orderResponse)
 	if err != nil {
-		return errors.New("failed to marshal order response: " + err.Error())
+		return err
 	}
-	util.SendPostRequest(ProviderURL, orderProviderRequestJSON)
+
+	if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
+		go sendOrderResponse(ProviderURL, orderResponse)
+	}
+
 	return nil
 }
 
 func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo schema.OrderUpdateRequest) error {
+	orderID := strconv.Itoa(int(orderUpdateInfo.OrderID))
+	err := s.redisClient.TryAcquireLock(ctx, orderID, LockTimeOut)
+	if err != nil {
+		return err
+	}
+	defer s.redisClient.ReleaseLock(ctx, orderID)
 
-	err := s.purchaseHistoryRepo.UpdatePurchaseHistoryStatusWithLock(ctx, orderUpdateInfo.OrderID, orderUpdateInfo.Status)
+	cacheKey := CacheKey + orderID
+
+	orderResponse, err := s.getCachedOrder(ctx, cacheKey)
+	if err != nil {
+		return err
+	}
+
+	if orderResponse.Status != model.PurchaseHistoryStatusConfirm {
+		return errors.New("order is not confirmed or failed")
+	}
+
+	err = s.purchaseHistoryRepo.UpdatePurchaseHistoryStatusByOrderID(ctx, orderUpdateInfo.OrderID, orderUpdateInfo.Status)
+	if err != nil {
+		return err
+	}
+
+	orderResponse.Status = orderUpdateInfo.Status
+	err = s.updateCacheOrderStaus(ctx, cacheKey, orderResponse)
 	if err != nil {
 		return err
 	}
 
 	if orderUpdateInfo.Status == model.PurchaseHistoryStatusFailed {
-		go func() {
-			payload, _ := json.Marshal(map[string]interface{}{
-				"order_id": orderUpdateInfo.OrderID,
-				"status":   orderUpdateInfo.Status,
-			})
-			req, err := http.NewRequest(http.MethodPatch, CashierUpdateURL, bytes.NewBuffer(payload))
-			if err != nil {
-				return
-			}
-			req.Header.Set("Content-Type", "application/json")
-			_, err = http.DefaultClient.Do(req)
-			if err != nil {
-				return
-			}
-		}()
+		go sendFailedOrder(CashierUpdateURL, orderUpdateInfo)
 	}
 
 	return nil
@@ -180,5 +181,67 @@ func (s *OrderService) StartOrderConfirmConsumer(ctx context.Context, topic, gro
 	}); err != nil {
 		return fmt.Errorf("failed to start order confirm consumer: %w", err)
 	}
+
 	return nil
+}
+
+func (s *OrderService) getCachedOrder(ctx context.Context, cacheKey string) (*schema.OrderResponse, error) {
+
+	order, err := s.redisClient.Get(ctx, cacheKey)
+	if err != nil {
+		return nil, errors.New("order not found or expired")
+	}
+
+	var orderResponse *schema.OrderResponse
+	err = json.Unmarshal([]byte(order), &orderResponse)
+	if err != nil {
+		return orderResponse, errors.New("failed to unmarshal order: " + err.Error())
+	}
+
+	return orderResponse, nil
+}
+
+func (s *OrderService) updateCacheOrderStaus(ctx context.Context, cacheKey string, orderResponse *schema.OrderResponse) error {
+	orderResponseJSON, err := json.Marshal(orderResponse)
+
+	if err != nil {
+		return errors.New("failed to marshal order response: " + err.Error())
+	}
+
+	err = s.redisClient.Set(ctx, cacheKey, orderResponseJSON, CacheTime)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func sendOrderResponse(url string, orderResponse *schema.OrderResponse) error {
+	orderProviderRequest := mapper.OrderProviderRequestFromOrderResponse(orderResponse, CallbackURL)
+	orderProviderRequestJSON, err := json.Marshal(orderProviderRequest)
+
+	if err != nil {
+		return errors.New("failed to marshal order response: " + err.Error())
+	}
+
+	util.SendPostRequest(url, orderProviderRequestJSON)
+	return nil
+}
+
+func sendFailedOrder(url string, orderUpdateInfo schema.OrderUpdateRequest) {
+	payload, _ := json.Marshal(map[string]interface{}{
+		"order_id": orderUpdateInfo.OrderID,
+		"status":   orderUpdateInfo.Status,
+	})
+
+	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(payload))
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	_, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
 }

@@ -7,6 +7,9 @@ import (
 	"gorm.io/gorm"
 )
 
+type IProviderRepository interface {
+	GetProviders(ctx context.Context) (*[]model.Provider, error)
+}
 type ProviderRepository struct {
 	db *gorm.DB
 }
@@ -22,4 +25,3 @@ func (r *ProviderRepository) GetProviders(ctx context.Context) (*[]model.Provide
 	}
 	return &providers, nil
 }
-

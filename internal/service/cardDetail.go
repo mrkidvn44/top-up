@@ -7,11 +7,16 @@ import (
 	"top-up-api/internal/schema"
 )
 
-type CardDetailService struct {
-	repo repository.CardDetailRepository
+type ICardDetailService interface {
+	GetCardDetailsByProviderCode(ctx context.Context, providerCode string) (*[]schema.CardDetailResponse, error)
+	GetCardDetailsGroupByProvider(ctx context.Context) (*[]schema.CardDetailsGroupByProvider, error)
 }
 
-func NewCardDetailService(repo repository.CardDetailRepository) *CardDetailService {
+type CardDetailService struct {
+	repo repository.ICardDetailRepository
+}
+
+func NewCardDetailService(repo repository.ICardDetailRepository) *CardDetailService {
 	return &CardDetailService{repo: repo}
 }
 
@@ -29,6 +34,7 @@ func (s *CardDetailService) GetCardDetailsByProviderCode(ctx context.Context, pr
 	}
 	return &cardDetailResponses, nil
 }
+
 func (s *CardDetailService) GetCardDetailsGroupByProvider(ctx context.Context) (*[]schema.CardDetailsGroupByProvider, error) {
 	cardDetails, err := s.repo.GetCardDetails(ctx)
 	if err != nil {

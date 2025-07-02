@@ -11,11 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+type IUserService interface {
+	GetUserByID(ctx context.Context, id uint) (*schema.UserProfileResponse, error)
+	Login(ctx context.Context, phoneNumber string, password string) (*schema.UserLoginDetail, error)
+	CreateUser(ctx context.Context, user schema.UserCreateRequest) error
+}
 type UserService struct {
-	repo repository.UserRepository
+	repo repository.IUserRepository
 }
 
-func NewUserService(userRepository repository.UserRepository) *UserService {
+func NewUserService(userRepository repository.IUserRepository) *UserService {
 	return &UserService{repo: userRepository}
 }
 

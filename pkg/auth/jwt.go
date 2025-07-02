@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 	"top-up-api/internal/schema"
 
@@ -13,7 +14,8 @@ import (
 type Interface interface {
 	CreateToken(user schema.UserLoginDetail) (string, error)
 	AuthenticateService(c *gin.Context) (*jwt.Token, error)
-	GetUserFromToken(token *jwt.Token) (*schema.UserAuthDetail, error)
+	GetUserFromToken(token *jwt.Token) *schema.UserAuthDetail
+	ValidateUserIDFromToken(token *jwt.Token, idStr string) (uint, error)
 }
 type authService struct {
 	jwtSecret []byte
@@ -68,10 +70,22 @@ func (a *authService) verifyToken(tokenString string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func (a *authService) GetUserFromToken(token *jwt.Token) (*schema.UserAuthDetail, error) {
+func (a *authService) GetUserFromToken(token *jwt.Token) *schema.UserAuthDetail {
 	user := &schema.UserAuthDetail{}
 	claims := token.Claims.(jwt.MapClaims)
 	user.PhoneNumber = claims["sub"].(string)
 	user.ID = uint(claims["id"].(float64))
-	return user, nil
+	return user
+}
+
+func (a *authService) ValidateUserIDFromToken(token *jwt.Token, idStr string) (uint, error) {
+	user := a.GetUserFromToken(token)
+	idInt, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid ID: %w", err)
+	}
+	if user.ID != uint(idInt) {
+		return 0, fmt.Errorf("unauthorized: token user ID does not match request ID")
+	}
+	return uint(idInt), nil
 }

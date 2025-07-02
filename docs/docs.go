@@ -97,6 +97,11 @@ const docTemplate = `{
         },
         "/order/create": {
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Create order",
                 "consumes": [
                     "application/json"
@@ -218,13 +223,13 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Page number",
                         "name": "page",
-                        "in": "path"
+                        "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "Page size",
                         "name": "pageSize",
-                        "in": "path"
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -299,7 +304,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/top-up-api_internal_schema.UserLoginDetail"
+                            "$ref": "#/definitions/top-up-api_internal_schema.Response"
                         }
                     }
                 }
@@ -405,8 +410,14 @@ const docTemplate = `{
                         "$ref": "#/definitions/top-up-api_internal_schema.CardDetailMiniatureResponse"
                     }
                 },
-                "provider": {
-                    "$ref": "#/definitions/top-up-api_internal_schema.ProviderInfo"
+                "provider_code": {
+                    "type": "string"
+                },
+                "provider_logo_url": {
+                    "type": "string"
+                },
+                "provider_name": {
+                    "type": "string"
                 }
             }
         },
@@ -424,8 +435,8 @@ const docTemplate = `{
         "top-up-api_internal_schema.OrderConfirmRequest": {
             "type": "object",
             "properties": {
-                "card_detail": {
-                    "$ref": "#/definitions/top-up-api_internal_schema.CardDetailResponse"
+                "card_detail_id": {
+                    "type": "integer"
                 },
                 "cash_back_value": {
                     "type": "integer"
@@ -603,20 +614,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 10,
                     "minLength": 10
-                }
-            }
-        },
-        "top-up-api_internal_schema.UserLoginDetail": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "phone_number": {
-                    "type": "string"
                 }
             }
         },

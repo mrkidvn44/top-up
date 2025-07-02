@@ -50,3 +50,11 @@ func NewDB(cfg *config.Config) (*DB, error) {
 	}
 	return &DB{Database: db}, nil
 }
+
+func (d *DB) Close() error {
+	db, err := d.Database.DB()
+	if err != nil {
+		return err
+	}
+	return db.Close()
+}

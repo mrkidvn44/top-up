@@ -18,12 +18,10 @@ func NewRouter(handler *gin.Engine, services *service.Container) {
 
 	h := handler.Group("/v1/api")
 	{
-		NewUserRouter(h, *services.UserService, services.Logger, services.Redis, services.Auth, services.Validator)
-		NewProviderRouter(h, *services.ProviderService, services.Logger)
-		NewCardDetailRouter(h, *services.CardDetailService, services.Logger)
-		NewPurchaseHistoryRouter(h, *services.PurchaseHistoryService, services.Logger, services.Auth)
-		NewOrderRouter(h, *services.OrderService, services.Logger)
+		NewUserRouter(h, services.UserService, services.Logger, services.Redis, services.Auth, services.Validator)
+		NewProviderRouter(h, services.ProviderService, services.Logger)
+		NewCardDetailRouter(h, services.CardDetailService, services.Logger)
+		NewPurchaseHistoryRouter(h, services.PurchaseHistoryService, services.Logger, services.Auth)
+		NewOrderRouter(h, services.OrderService, services.Logger, services.Auth, services.Validator)
 	}
 }
-
-

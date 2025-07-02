@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"top-up-api/internal/mapper"
@@ -13,14 +12,14 @@ import (
 )
 
 type PurchaseHistoryRouter struct {
-	service service.PurchaseHistoryService
+	service service.IPurchaseHistoryService
 	logger  logger.Interface
 	auth    auth.Interface
 }
 
-func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.PurchaseHistoryService, l logger.Interface, a auth.Interface) {
+func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.IPurchaseHistoryService, l logger.Interface, a auth.Interface) {
 	h := &PurchaseHistoryRouter{service: s, logger: l, auth: a}
-	handler.GET("/purchase-history/:id", h.GetPurchaseHistory)
+	handler.GET("/purchase-history/:user_id", h.GetPurchaseHistory)
 }
 
 // BasePath /v1/api
@@ -31,11 +30,11 @@ func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.PurchaseHistor
 // @Accept json
 // @Produce json
 // @Param id path int true "User ID"
-// @Param page path int false "Page number"
-// @Param pageSize path int false "Page size"
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
 // @Security Bearer
 // @Success 200 {object} top-up-api_internal_schema.PaginationResponse
-// @Router /purchase-history/{id} [get]
+// @Router /purchase-history/{user_id} [get]
 func (h *PurchaseHistoryRouter) GetPurchaseHistory(c *gin.Context) {
 	token, err := h.auth.AuthenticateService(c)
 	if err != nil {
@@ -44,23 +43,10 @@ func (h *PurchaseHistoryRouter) GetPurchaseHistory(c *gin.Context) {
 		return
 	}
 
-	userAuth, err := h.auth.GetUserFromToken(token)
+	userID, err := h.auth.ValidateUserIDFromToken(token, c.Param("user_id"))
 	if err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
-		return
-	}
-
-	id := c.Param("id")
-	idInt, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		h.logger.Error(err)
-		c.JSON(http.StatusBadRequest, mapper.ErrorResponse(http.StatusBadRequest, "Invalid ID", ""))
-		return
-	}
-	if userAuth.ID != uint(idInt) {
-		h.logger.Error(fmt.Errorf("userAuth.ID: %v, idInt: %v", userAuth.ID, idInt))
-		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", ""))
 		return
 	}
 
@@ -77,7 +63,8 @@ func (h *PurchaseHistoryRouter) GetPurchaseHistory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, mapper.ErrorResponse(http.StatusBadRequest, "Invalid page size", ""))
 		return
 	}
-	paginatedResponse, err := h.service.GetPurchaseHistoriesByUserIDPaginated(c, userAuth.ID, page, pageSize)
+
+	paginatedResponse, err := h.service.GetPurchaseHistoriesByUserIDPaginated(c, userID, page, pageSize)
 	if err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusInternalServerError, mapper.ErrorResponse(http.StatusInternalServerError, "Internal Server Error", err.Error()))

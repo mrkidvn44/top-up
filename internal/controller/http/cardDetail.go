@@ -12,11 +12,11 @@ import (
 )
 
 type CardDetailRouter struct {
-	service service.CardDetailService
+	service service.ICardDetailService
 	logger  logger.Interface
 }
 
-func NewCardDetailRouter(handler *gin.RouterGroup, s service.CardDetailService, l logger.Interface) {
+func NewCardDetailRouter(handler *gin.RouterGroup, s service.ICardDetailService, l logger.Interface) {
 	h := &CardDetailRouter{service: s, logger: l}
 	cardDetailRoutes := handler.Group("/card-detail")
 	{

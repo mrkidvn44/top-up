@@ -7,11 +7,15 @@ import (
 	"top-up-api/internal/schema"
 )
 
-type ProviderService struct {
-	repo repository.ProviderRepository
+type IProviderService interface {
+	GetProviders(ctx context.Context) (*[]schema.ProviderResponse, error)
 }
 
-func NewProviderService(providerRepository repository.ProviderRepository) *ProviderService {
+type ProviderService struct {
+	repo repository.IProviderRepository
+}
+
+func NewProviderService(providerRepository repository.IProviderRepository) *ProviderService {
 	return &ProviderService{repo: providerRepository}
 }
 

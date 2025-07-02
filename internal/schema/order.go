@@ -10,7 +10,7 @@ type OrderConfirmRequest struct {
 	UserID        uint                        `json:"user_id"`
 	CardDetailID  uint                        `json:"card_detail_id"`
 	TotalPrice    int                         `json:"total_price"`
-	Status        model.PurchaseHistoryStatus `json:"status"`
+	Status        model.PurchaseHistoryStatus `json:"status" validate:"purchasehistorystatus"`
 	PhoneNumber   string                      `json:"phone_number"`
 	CashBackValue int                         `json:"cash_back_value"`
 }

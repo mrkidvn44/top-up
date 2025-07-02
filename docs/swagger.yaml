@@ -38,8 +38,12 @@ definitions:
         items:
           $ref: '#/definitions/top-up-api_internal_schema.CardDetailMiniatureResponse'
         type: array
-      provider:
-        $ref: '#/definitions/top-up-api_internal_schema.ProviderInfo'
+      provider_code:
+        type: string
+      provider_logo_url:
+        type: string
+      provider_name:
+        type: string
     type: object
   top-up-api_internal_schema.CardPriceResponse:
     properties:
@@ -50,8 +54,8 @@ definitions:
     type: object
   top-up-api_internal_schema.OrderConfirmRequest:
     properties:
-      card_detail:
-        $ref: '#/definitions/top-up-api_internal_schema.CardDetailResponse'
+      card_detail_id:
+        type: integer
       cash_back_value:
         type: integer
       order_id:
@@ -172,15 +176,6 @@ definitions:
     - password
     - phone_number
     type: object
-  top-up-api_internal_schema.UserLoginDetail:
-    properties:
-      id:
-        type: integer
-      password:
-        type: string
-      phone_number:
-        type: string
-    type: object
   top-up-api_internal_schema.UserLoginRequest:
     properties:
       password:
@@ -283,6 +278,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/top-up-api_internal_schema.OrderResponse'
+      security:
+      - Bearer: []
       summary: Create order
       tags:
       - order
@@ -336,11 +333,11 @@ paths:
         required: true
         type: integer
       - description: Page number
-        in: path
+        in: query
         name: page
         type: integer
       - description: Page size
-        in: path
+        in: query
         name: pageSize
         type: integer
       produces:
@@ -422,7 +419,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/top-up-api_internal_schema.UserLoginDetail'
+            $ref: '#/definitions/top-up-api_internal_schema.Response'
       summary: Login
       tags:
       - user

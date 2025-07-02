@@ -32,7 +32,7 @@ func Run(cfg *config.Config) {
 		panic(err)
 	}
 
-	lis, err := net.Listen("tcp", ":" + cfg.Grpc.Port)
+	lis, err := net.Listen("tcp", ":"+cfg.Grpc.Port)
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - net.Listen: %w", err))
 		os.Exit(1)
@@ -77,9 +77,25 @@ func Run(cfg *config.Config) {
 	}
 
 	// Shutdown
+	// httpServer
 	err = httpServer.Shutdown()
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - httpServer.Shutdown: %w", err))
 	}
 
+	// Database connection
+	err = db.Close()
+	if err != nil {
+		logger.Error(fmt.Errorf("app - Run - db.Close: %w", err))
+	}
+
+	err = lis.Close()
+	if err != nil {
+		logger.Error(fmt.Errorf("app - Run - lis.Close: %w", err))
+	}
+
+	err = services.CloseKafka()
+	if err != nil {
+		logger.Error(fmt.Errorf("app - Run - services.CloseKafka: %w", err))
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	"top-up-api/config"
 	controller "top-up-api/internal/controller/http"
 	"top-up-api/internal/db"
@@ -22,6 +23,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+const _waitTime = 2 * time.Minute
 
 func Run(cfg *config.Config) {
 	logger := logger.New(cfg.Log.Level, cfg.Env)
@@ -83,19 +86,26 @@ func Run(cfg *config.Config) {
 		logger.Error(fmt.Errorf("app - Run - httpServer.Shutdown: %w", err))
 	}
 
+	// Grpc Server
+	grpcServer.GracefulStop()
+
+	// Local listener
+	err = lis.Close()
+	if err != nil {
+		logger.Error(fmt.Errorf("app - Run - lis.Close: %w", err))
+	}
+	
+	// Kafka service
+	err = services.CloseKafka()
+	if err != nil {
+		logger.Error(fmt.Errorf("app - Run - services.CloseKafka: %w", err))
+	}
+
 	// Database connection
 	err = db.Close()
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - db.Close: %w", err))
 	}
 
-	err = lis.Close()
-	if err != nil {
-		logger.Error(fmt.Errorf("app - Run - lis.Close: %w", err))
-	}
-
-	err = services.CloseKafka()
-	if err != nil {
-		logger.Error(fmt.Errorf("app - Run - services.CloseKafka: %w", err))
-	}
+	time.Sleep(_waitTime)
 }

@@ -94,7 +94,7 @@ func Run(cfg *config.Config) {
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - lis.Close: %w", err))
 	}
-	
+
 	// Kafka service
 	err = services.CloseKafka()
 	if err != nil {

@@ -16,9 +16,12 @@ type Interface interface {
 	Error(message error, args ...zap.Field)
 	Fatal(message string, args ...zap.Field)
 }
+
 type Logger struct {
 	logger *zap.Logger
 }
+
+var _ Interface = (*Logger)(nil)
 
 func New(level string, env string) *Logger {
 	l := new(zapcore.Level)

@@ -17,6 +17,8 @@ type CardDetailRepository struct {
 	db *gorm.DB
 }
 
+var _ (ICardDetailRepository) = (*CardDetailRepository)(nil)
+
 func NewCardDetailRepository(db *gorm.DB) *CardDetailRepository {
 	return &CardDetailRepository{db: db}
 }

@@ -17,6 +17,8 @@ type PurchaseHistoryService struct {
 	repo repository.IPurchaseHistoryRepository
 }
 
+var _ IPurchaseHistoryService = (*PurchaseHistoryService)(nil)
+
 func NewPurchaseHistoryService(repo repository.IPurchaseHistoryRepository) *PurchaseHistoryService {
 	return &PurchaseHistoryService{repo: repo}
 }

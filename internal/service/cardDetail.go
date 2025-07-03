@@ -16,6 +16,8 @@ type CardDetailService struct {
 	repo repository.ICardDetailRepository
 }
 
+var _ ICardDetailService = (*CardDetailService)(nil)
+
 func NewCardDetailService(repo repository.ICardDetailRepository) *CardDetailService {
 	return &CardDetailService{repo: repo}
 }

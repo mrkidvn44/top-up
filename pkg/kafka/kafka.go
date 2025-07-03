@@ -24,6 +24,9 @@ type KafkaProducer struct {
 	producer *kafka.Producer
 }
 
+var _ Consumer = (*KafkaConsumer)(nil)
+var _ Producer = (*KafkaProducer)(nil)
+
 func NewKafkaConsumer(brokers string, groupID string) (*KafkaConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": brokers,

@@ -9,14 +9,10 @@ import (
 )
 
 const (
-	TIMEOUT = 5 * time.Minute
+	_timeOut = 5 * time.Minute
 )
 
 var NotFound = redis.Nil
-
-type RedisClient struct {
-	Client *redis.Client
-}
 
 type Interface interface {
 	Get(ctx context.Context, key string) (string, error)
@@ -26,6 +22,12 @@ type Interface interface {
 	ReleaseLock(ctx context.Context, key string) error
 	TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error
 }
+
+type RedisClient struct {
+	Client *redis.Client
+}
+
+var _ Interface = (*RedisClient)(nil)
 
 func NewRedis(cfg config.Redis) *RedisClient {
 	return &RedisClient{Client: redis.NewClient(&redis.Options{
@@ -49,7 +51,7 @@ func (r *RedisClient) Del(ctx context.Context, key string) error {
 
 func (r *RedisClient) GetLock(ctx context.Context, key string) bool {
 	encodeKey := "lock:" + key
-	wasSet, err := r.Client.SetNX(ctx, encodeKey, 1, TIMEOUT).Result()
+	wasSet, err := r.Client.SetNX(ctx, encodeKey, 1, _timeOut).Result()
 	return err == nil && wasSet
 }
 

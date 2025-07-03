@@ -19,6 +19,8 @@ type PurchaseHistoryRepository struct {
 	db *gorm.DB
 }
 
+var _ IPurchaseHistoryRepository = (*PurchaseHistoryRepository)(nil)
+
 func NewPurchaseHistoryRepository(db *gorm.DB) *PurchaseHistoryRepository {
 	return &PurchaseHistoryRepository{db: db}
 }

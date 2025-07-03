@@ -18,6 +18,8 @@ type Validator struct {
 	translator ut.Translator
 }
 
+var _ Interface = (*Validator)(nil)
+
 func NewValidator() *Validator {
 	v := validator.New()
 

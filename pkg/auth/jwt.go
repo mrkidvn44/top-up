@@ -17,9 +17,12 @@ type Interface interface {
 	GetUserFromToken(token *jwt.Token) *schema.UserAuthDetail
 	ValidateUserIDFromToken(token *jwt.Token, idStr string) (uint, error)
 }
+
 type authService struct {
 	jwtSecret []byte
 }
+
+var _ Interface = (*authService)(nil)
 
 func NewAuthService(jwtSecret []byte) *authService {
 	return &authService{jwtSecret: jwtSecret}

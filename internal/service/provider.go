@@ -15,6 +15,8 @@ type ProviderService struct {
 	repo repository.IProviderRepository
 }
 
+var _ IProviderService = (*ProviderService)(nil)
+
 func NewProviderService(providerRepository repository.IProviderRepository) *ProviderService {
 	return &ProviderService{repo: providerRepository}
 }

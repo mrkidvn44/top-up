@@ -14,6 +14,8 @@ type ProviderRepository struct {
 	db *gorm.DB
 }
 
+var _ IProviderRepository = (*ProviderRepository)(nil)
+
 func NewProviderRepository(db *gorm.DB) *ProviderRepository {
 	return &ProviderRepository{db: db}
 }

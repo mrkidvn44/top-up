@@ -108,6 +108,10 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 		return errors.New("order mismatch")
 	}
 
+	if orderConfirmRequest.Status == model.PurchaseHistoryStatusPending {
+		return errors.New("order is pending")
+	}
+
 	if orderResponse.Status != model.PurchaseHistoryStatusPending {
 		return errors.New("order already confirmed or failed")
 	}

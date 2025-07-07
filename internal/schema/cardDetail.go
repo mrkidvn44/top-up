@@ -6,57 +6,57 @@ import (
 	"top-up-api/internal/model"
 )
 
-type SkuResponse struct {
+type CardDetailResponse struct {
 	ID                uint `json:"id"`
-	Price             int  `json:"price"`
+	CardPriceResponse `json:"card_price"`
 	CashBackInterface `json:"cash_back"`
 	ProviderInfo      `json:"provider"`
 }
 
-type SkuMiniatureResponse struct {
+type CardDetailMiniatureResponse struct {
 	ID                uint `json:"id"`
-	Price             int  `json:"price"`
+	CardPriceResponse `json:"card_price"`
 	CashBackInterface `json:"provider"`
 }
 
-type SkusGroupByProvider struct {
-	ProviderCode    string                 `json:"provider_code"`
-	ProviderName    string                 `json:"provider_name"`
-	ProviderLogoUrl string                 `json:"provider_logo_url"`
-	Skus            []SkuMiniatureResponse `json:"sku"`
+type CardDetailsGroupByProvider struct {
+	ProviderCode    string                        `json:"provider_code"`
+	ProviderName    string                        `json:"provider_name"`
+	ProviderLogoUrl string                        `json:"provider_logo_url"`
+	CardDetails     []CardDetailMiniatureResponse `json:"card_details"`
 }
 
-func (c *SkuResponse) UnmarshalJSON(data []byte) error {
-	var rawSku struct {
-		ID       uint            `json:"id"`
-		Price    int             `json:"price"`
-		CashBack json.RawMessage `json:"cash_back"`
-		Provider ProviderInfo    `json:"provider"`
+func (c *CardDetailResponse) UnmarshalJSON(data []byte) error {
+	var rawCardDetail struct {
+		ID        uint              `json:"id"`
+		CardPrice CardPriceResponse `json:"card_price"`
+		CashBack  json.RawMessage   `json:"cash_back"`
+		Provider  ProviderInfo      `json:"provider"`
 	}
-	if err := json.Unmarshal(data, &rawSku); err != nil {
+	if err := json.Unmarshal(data, &rawCardDetail); err != nil {
 		return err
 	}
 
-	c.ID = rawSku.ID
-	c.Price = rawSku.Price
-	c.ProviderInfo = rawSku.Provider
+	c.ID = rawCardDetail.ID
+	c.CardPriceResponse = rawCardDetail.CardPrice
+	c.ProviderInfo = rawCardDetail.Provider
 	var typeDetector struct {
 		Type string `json:"type"`
 	}
-	if err := json.Unmarshal(rawSku.CashBack, &typeDetector); err != nil {
+	if err := json.Unmarshal(rawCardDetail.CashBack, &typeDetector); err != nil {
 		return err
 	}
 
 	switch typeDetector.Type {
 	case string(model.CashBackTypePercentage):
 		var cb CashBackPercentage
-		if err := json.Unmarshal(rawSku.CashBack, &cb); err != nil {
+		if err := json.Unmarshal(rawCardDetail.CashBack, &cb); err != nil {
 			return err
 		}
 		c.CashBackInterface = &cb
 	case string(model.CashBackTypeFixed):
 		var cb CashBackFixed
-		if err := json.Unmarshal(rawSku.CashBack, &cb); err != nil {
+		if err := json.Unmarshal(rawCardDetail.CashBack, &cb); err != nil {
 			return err
 		}
 		c.CashBackInterface = &cb

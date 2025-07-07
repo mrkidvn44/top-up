@@ -17,13 +17,13 @@ type PurchaseHistory struct {
 	gorm.Model
 	OrderID       uint                  `json:"order_id" gorm:"not null"`
 	UserID        uint                  `json:"user_id" gorm:"not null"`
-	SkuID         uint                  `json:"sku_id" gorm:"not null"`
+	CardDetailID  uint                  `json:"card_detail_id" gorm:"not null"`
 	TotalPrice    int                   `json:"total_price" gorm:"not null"`
 	PhoneNumber   string                `json:"phone_number" gorm:"not null"`
 	CashBackValue int                   `json:"cash_back_value" gorm:"default:0"`
 	Status        PurchaseHistoryStatus `json:"status" gorm:"type:purchase_history_status; not null"`
 	User          User                  `json:"user" gorm:"foreignKey:UserID;references:ID"`
-	Sku           Sku                   `json:"sku" gorm:"foreignKey:SkuID;references:ID"`
+	CardDetail    CardDetail            `json:"card_detail" gorm:"foreignKey:CardDetailID;references:ID"`
 }
 
 func (PurchaseHistory) TableName() string {

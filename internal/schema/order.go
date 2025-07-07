@@ -8,7 +8,7 @@ import (
 type OrderConfirmRequest struct {
 	OrderID       uint                        `json:"order_id"`
 	UserID        uint                        `json:"user_id"`
-	SkuID         uint                        `json:"sku_id"`
+	CardDetailID  uint                        `json:"card_detail_id"`
 	TotalPrice    int                         `json:"total_price"`
 	Status        model.PurchaseHistoryStatus `json:"status" validate:"purchasehistorystatus"`
 	PhoneNumber   string                      `json:"phone_number"`
@@ -16,15 +16,15 @@ type OrderConfirmRequest struct {
 }
 
 type OrderRequest struct {
-	UserID      uint   `json:"user_id"`
-	SkuID       uint   `json:"sku_id"`
-	PhoneNumber string `json:"phone_number"`
+	UserID       uint   `json:"user_id"`
+	CardDetailID uint   `json:"card_detail_id"`
+	PhoneNumber  string `json:"phone_number"`
 }
 
 type OrderResponse struct {
 	OrderID       uint                        `json:"order_id"`
 	UserID        uint                        `json:"user_id"`
-	Sku           SkuResponse                 `json:"sku"`
+	CardDetail    CardDetailResponse          `json:"card_detail"`
 	TotalPrice    int                         `json:"total_price"`
 	Status        model.PurchaseHistoryStatus `json:"status"`
 	PhoneNumber   string                      `json:"phone_number"`
@@ -35,7 +35,7 @@ type OrderProviderRequest struct {
 	OrderID     uint   `json:"order_id"`
 	PhoneNumber string `json:"phone_number"`
 	TotalPrice  int    `json:"total_price"`
-	Price       int    `json:"price"`
+	CardPrice   int    `json:"card_price"`
 	CallBackUrl string `json:"callback_url"`
 }
 

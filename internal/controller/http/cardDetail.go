@@ -11,17 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
-type SkuRouter struct {
-	service service.ISkuService
+type CardDetailRouter struct {
+	service service.ICardDetailService
 	logger  logger.Interface
 }
 
-func NewSkuRouter(handler *gin.RouterGroup, s service.ISkuService, l logger.Interface) {
-	h := &SkuRouter{service: s, logger: l}
-	skuRoutes := handler.Group("/sku")
+func NewCardDetailRouter(handler *gin.RouterGroup, s service.ICardDetailService, l logger.Interface) {
+	h := &CardDetailRouter{service: s, logger: l}
+	cardDetailRoutes := handler.Group("/card-detail")
 	{
-		skuRoutes.GET("/:providerCode", h.GetSkusByProviderCode)
-		skuRoutes.GET("/", h.GetSkusGroupByProvider)
+		cardDetailRoutes.GET("/:providerCode", h.GetCardDetailsByProviderCode)
+		cardDetailRoutes.GET("/", h.GetCardDetailsGroupByProvider)
 	}
 }
 
@@ -31,34 +31,34 @@ func NewSkuRouter(handler *gin.RouterGroup, s service.ISkuService, l logger.Inte
 // @Description Get card details by provider code
 // @Tags card-detail
 // @Param providerCode path string true "Provider code"
-// @Success 200 {array} top-up-api_internal_schema.SkuResponse
+// @Success 200 {array} top-up-api_internal_schema.CardDetailResponse
 // @Router /card-detail/{providerCode} [get]
-func (h *SkuRouter) GetSkusByProviderCode(c *gin.Context) {
+func (h *CardDetailRouter) GetCardDetailsByProviderCode(c *gin.Context) {
 	providerCode := c.Param("providerCode")
-	skus, err := h.service.GetSkusByProviderCode(c, providerCode)
+	cardDetails, err := h.service.GetCardDetailsByProviderCode(c, providerCode)
 	if err != nil {
 		h.logger.Error(errors.New("error getting card details"), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, mapper.SuccessResponse(skus))
+	c.JSON(http.StatusOK, mapper.SuccessResponse(cardDetails))
 }
 
 // @Summary Get card details grouped by provider
 // @Description Get card details grouped by provider
 // @Tags card-detail
-// @Success 200 {object} top-up-api_internal_schema.SkusGroupByProvider
+// @Success 200 {object} top-up-api_internal_schema.CardDetailsGroupByProvider
 // @Router /card-detail [get]
-func (h *SkuRouter) GetSkusGroupByProvider(c *gin.Context) {
-	skus, err := h.service.GetSkusGroupByProvider(c)
+func (h *CardDetailRouter) GetCardDetailsGroupByProvider(c *gin.Context) {
+	cardDetails, err := h.service.GetCardDetailsGroupByProvider(c)
 	if err != nil {
 		h.logger.Error(errors.New("error getting card details grouped by provider"), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if skus == nil {
+	if cardDetails == nil {
 		c.JSON(http.StatusOK, mapper.SuccessResponse(nil))
 		return
 	}
-	c.JSON(http.StatusOK, mapper.SuccessResponse(skus))
+	c.JSON(http.StatusOK, mapper.SuccessResponse(cardDetails))
 }

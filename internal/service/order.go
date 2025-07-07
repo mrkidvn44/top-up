@@ -40,7 +40,7 @@ type IOrderService interface {
 }
 
 type OrderService struct {
-	skuRepo              repository.ISkuRepository
+	cardDetailRepo       repository.ICardDetailRepository
 	purchaseHistoryRepo  repository.IPurchaseHistoryRepository
 	redisClient          redis.Interface
 	orderConfirmConsumer kfk.Consumer
@@ -49,13 +49,13 @@ type OrderService struct {
 var _ IOrderService = (*OrderService)(nil)
 
 func NewOrderService(
-	skuRepo repository.ISkuRepository,
+	cardDetailRepo repository.ICardDetailRepository,
 	purchaseHistoryRepo repository.IPurchaseHistoryRepository,
 	redisClient redis.Interface,
 	orderConfirmConsumer kfk.Consumer,
 ) *OrderService {
 	return &OrderService{
-		skuRepo:              skuRepo,
+		cardDetailRepo:       cardDetailRepo,
 		purchaseHistoryRepo:  purchaseHistoryRepo,
 		redisClient:          redisClient,
 		orderConfirmConsumer: orderConfirmConsumer,
@@ -63,16 +63,16 @@ func NewOrderService(
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error) {
-	sku, err := s.skuRepo.GetSkuByID(ctx, order.SkuID)
+	cardDetail, err := s.cardDetailRepo.GetCardDetailByID(ctx, order.CardDetailID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New("sku not found")
+			return nil, errors.New("card detail not found")
 		}
 		return nil, err
 	}
 
 	orderID := util.GenerateOrderID()
-	orderResponse := mapper.OrderResponseFromOrderRequest(order, sku, orderID)
+	orderResponse := mapper.OrderResponseFromOrderRequest(order, cardDetail, orderID)
 
 	orderResponseJSON, err := json.Marshal(orderResponse)
 	if err != nil {

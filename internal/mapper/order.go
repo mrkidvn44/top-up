@@ -6,17 +6,17 @@ import (
 	pb "top-up-api/proto/order"
 )
 
-func OrderResponseFromOrderRequest(orderRequest schema.OrderRequest, sku *model.Sku, orderID uint) *schema.OrderResponse {
-	skuResponse := SkuResponseFromModel(*sku)
+func OrderResponseFromOrderRequest(orderRequest schema.OrderRequest, cardDetail *model.CardDetail, orderID uint) *schema.OrderResponse {
+	cardDetailResponse := CardDetailResponseFromModel(*cardDetail)
 
 	return &schema.OrderResponse{
 		OrderID:       orderID,
 		UserID:        orderRequest.UserID,
-		Sku:           *skuResponse,
-		TotalPrice:    skuResponse.Price,
+		CardDetail:    *cardDetailResponse,
+		TotalPrice:    cardDetailResponse.CardPriceResponse.Value,
 		Status:        model.PurchaseHistoryStatusPending,
 		PhoneNumber:   orderRequest.PhoneNumber,
-		CashBackValue: skuResponse.CashBackInterface.CalculateCashBack(sku.Price),
+		CashBackValue: cardDetailResponse.CashBackInterface.CalculateCashBack(cardDetail.CardPrice.Value),
 	}
 
 }
@@ -26,7 +26,7 @@ func OrderProviderRequestFromOrderResponse(orderResponse *schema.OrderResponse, 
 		OrderID:     orderResponse.OrderID,
 		PhoneNumber: orderResponse.PhoneNumber,
 		TotalPrice:  orderResponse.TotalPrice,
-		Price:       orderResponse.Sku.Price,
+		CardPrice:   orderResponse.CardDetail.CardPriceResponse.Value,
 		CallBackUrl: callbackUrl,
 	}
 }
@@ -35,7 +35,7 @@ func OrderConfirmRequestFromProto(order *pb.OrderConfirmRequest) *schema.OrderCo
 	return &schema.OrderConfirmRequest{
 		OrderID:       uint(order.OrderId),
 		UserID:        uint(order.UserId),
-		SkuID:         uint(order.SkuId),
+		CardDetailID:  uint(order.CardDetailId),
 		TotalPrice:    int(order.TotalPrice),
 		Status:        model.PurchaseHistoryStatus(order.Status),
 		PhoneNumber:   order.PhoneNumber,

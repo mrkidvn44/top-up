@@ -7,45 +7,45 @@ import (
 	"top-up-api/internal/schema"
 )
 
-type ISkuService interface {
-	GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]schema.SkuResponse, error)
-	GetSkusGroupByProvider(ctx context.Context) (*[]schema.SkusGroupByProvider, error)
+type ICardDetailService interface {
+	GetCardDetailsByProviderCode(ctx context.Context, providerCode string) (*[]schema.CardDetailResponse, error)
+	GetCardDetailsGroupByProvider(ctx context.Context) (*[]schema.CardDetailsGroupByProvider, error)
 }
 
-type SkuService struct {
-	repo repository.ISkuRepository
+type CardDetailService struct {
+	repo repository.ICardDetailRepository
 }
 
-var _ ISkuService = (*SkuService)(nil)
+var _ ICardDetailService = (*CardDetailService)(nil)
 
-func NewSkuService(repo repository.ISkuRepository) *SkuService {
-	return &SkuService{repo: repo}
+func NewCardDetailService(repo repository.ICardDetailRepository) *CardDetailService {
+	return &CardDetailService{repo: repo}
 }
 
-func (s *SkuService) GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]schema.SkuResponse, error) {
-	skus, err := s.repo.GetSkusByProviderCode(ctx, providerCode)
+func (s *CardDetailService) GetCardDetailsByProviderCode(ctx context.Context, providerCode string) (*[]schema.CardDetailResponse, error) {
+	cardDetails, err := s.repo.GetCardDetailsByProviderCode(ctx, providerCode)
 	if err != nil {
 		return nil, err
 	}
-	if skus == nil {
+	if cardDetails == nil {
 		return nil, nil
 	}
-	skuResponses := make([]schema.SkuResponse, len(*skus))
-	for i, sku := range *skus {
-		skuResponses[i] = *mapper.SkuResponseFromModel(sku)
+	cardDetailResponses := make([]schema.CardDetailResponse, len(*cardDetails))
+	for i, cardDetail := range *cardDetails {
+		cardDetailResponses[i] = *mapper.CardDetailResponseFromModel(cardDetail)
 	}
-	return &skuResponses, nil
+	return &cardDetailResponses, nil
 }
 
-func (s *SkuService) GetSkusGroupByProvider(ctx context.Context) (*[]schema.SkusGroupByProvider, error) {
-	skus, err := s.repo.GetSkus(ctx)
+func (s *CardDetailService) GetCardDetailsGroupByProvider(ctx context.Context) (*[]schema.CardDetailsGroupByProvider, error) {
+	cardDetails, err := s.repo.GetCardDetails(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if skus == nil {
+	if cardDetails == nil {
 		return nil, nil
 	}
-	groupedDetails := mapper.SkusGroupByProviderFromModel(*skus)
+	groupedDetails := mapper.CardDetailsGroupByProviderFromModel(*cardDetails)
 	if groupedDetails == nil {
 		return nil, nil
 	}

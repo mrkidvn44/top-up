@@ -30,7 +30,7 @@ type Container struct {
 	// Services
 	UserService            *UserService
 	ProviderService        *ProviderService
-	SkuService             *SkuService
+	CardDetailService      *CardDetailService
 	PurchaseHistoryService *PurchaseHistoryService
 	OrderService           *OrderService
 
@@ -57,15 +57,15 @@ func NewContainer(
 	// Initialize repositories
 	userRepository := repository.NewUserRepository(database)
 	providerRepository := repository.NewProviderRepository(database)
-	skuRepository := repository.NewSkuRepository(database)
+	cardDetailRepository := repository.NewCardDetailRepository(database)
 	purchaseHistoryRepository := repository.NewPurchaseHistoryRepository(database)
 
 	// Initialize services
 	userService := NewUserService(userRepository)
 	providerService := NewProviderService(providerRepository)
-	skuService := NewSkuService(skuRepository)
+	cardDetailService := NewCardDetailService(cardDetailRepository)
 	purchaseHistoryService := NewPurchaseHistoryService(purchaseHistoryRepository)
-	orderService := NewOrderService(skuRepository, purchaseHistoryRepository, redis, orderKafkaConsumer)
+	orderService := NewOrderService(cardDetailRepository, purchaseHistoryRepository, redis, orderKafkaConsumer)
 
 	return &Container{
 		// Config
@@ -80,7 +80,7 @@ func NewContainer(
 		// Services
 		UserService:            userService,
 		ProviderService:        providerService,
-		SkuService:             skuService,
+		CardDetailService:      cardDetailService,
 		PurchaseHistoryService: purchaseHistoryService,
 		OrderService:           orderService,
 

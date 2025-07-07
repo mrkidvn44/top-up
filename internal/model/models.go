@@ -3,7 +3,8 @@ package model
 func GetModels() []interface{} {
 	return []interface{}{
 		&User{},
-		&Sku{},
+		&CardDetail{},
+		&CardPrice{},
 		&CashBack{},
 		&Provider{},
 		&PurchaseHistory{},

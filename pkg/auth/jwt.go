@@ -11,6 +11,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	_issuer     = "top-up-api"
+	_expireTime = 30 * time.Minute
+)
+
 type Interface interface {
 	CreateToken(user schema.UserLoginDetail) (string, error)
 	AuthenticateService(c *gin.Context) (*jwt.Token, error)
@@ -32,9 +37,9 @@ func (a *authService) CreateToken(user schema.UserLoginDetail) (string, error) {
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.PhoneNumber,
 		"id":  user.ID,
-		"iss": "top-up-api",
+		"iss": _issuer,
 		"iat": time.Now().Unix(),
-		"exp": time.Now().Add(time.Minute * 30).Unix(),
+		"exp": time.Now().Add(_expireTime).Unix(),
 	})
 	tokenString, err := claims.SignedString(a.jwtSecret)
 	if err != nil {

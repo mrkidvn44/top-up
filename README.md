@@ -39,7 +39,7 @@ Top-Up API is a backend service built with **Go (Golang)**. It provides APIs for
 
 1. **Clone the repository**
     ```sh
-    git clone <your-repo-url>
+    git clone https://github.com/mrkidvn44/top-up-api
     cd top-up-api
     ```
 

@@ -60,8 +60,6 @@ func (r *RedisClient) ReleaseLock(ctx context.Context, key string) error {
 	return r.Client.Del(ctx, encodeKey).Err()
 }
 
-// TryAcquireLock tries to acquire a lock for the given key within the specified timeout duration.
-// Returns nil if lock acquired, otherwise returns error if timed out.
 func (r *RedisClient) TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error {
 	expireTime := time.Now().Add(timeout)
 	for {
@@ -74,5 +72,3 @@ func (r *RedisClient) TryAcquireLock(ctx context.Context, key string, timeout ti
 		time.Sleep(5 * time.Millisecond)
 	}
 }
-
-// ...existing code...

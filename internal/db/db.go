@@ -48,6 +48,7 @@ func NewDB(cfg *config.Config) (*DB, error) {
 		}
 
 	}
+
 	return &DB{Database: db}, nil
 }
 

@@ -1,0 +1,435 @@
+definitions:
+  gin.H:
+    additionalProperties: {}
+    type: object
+  payment-api_internal_model.PurchaseHistoryStatus:
+    enum:
+      - pending
+      - confirm
+      - success
+      - failed
+    type: string
+    x-enum-varnames:
+      - PurchaseHistoryStatusPending
+      - PurchaseHistoryStatusConfirm
+      - PurchaseHistoryStatusSuccess
+      - PurchaseHistoryStatusFailed
+  payment-api_internal_schema.CardDetailMiniatureResponse:
+    properties:
+      card_price:
+        $ref: "#/definitions/payment-api_internal_schema.CardPriceResponse"
+      id:
+        type: integer
+      provider: {}
+    type: object
+  payment-api_internal_schema.CardDetailResponse:
+    properties:
+      card_price:
+        $ref: "#/definitions/payment-api_internal_schema.CardPriceResponse"
+      cash_back: {}
+      id:
+        type: integer
+      provider:
+        $ref: "#/definitions/payment-api_internal_schema.ProviderInfo"
+    type: object
+  payment-api_internal_schema.CardDetailsGroupByProvider:
+    properties:
+      card_details:
+        items:
+          $ref: "#/definitions/payment-api_internal_schema.CardDetailMiniatureResponse"
+        type: array
+      provider:
+        $ref: "#/definitions/payment-api_internal_schema.ProviderInfo"
+    type: object
+  payment-api_internal_schema.CardPriceResponse:
+    properties:
+      code:
+        type: string
+      value:
+        type: integer
+    type: object
+  payment-api_internal_schema.OrderConfirmRequest:
+    properties:
+      card_detail:
+        $ref: "#/definitions/payment-api_internal_schema.CardDetailResponse"
+      cash_back_value:
+        type: integer
+      order_id:
+        type: integer
+      phone_number:
+        type: string
+      status:
+        $ref: "#/definitions/payment-api_internal_model.PurchaseHistoryStatus"
+      total_price:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  payment-api_internal_schema.OrderRequest:
+    properties:
+      card_detail_id:
+        type: integer
+      phone_number:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  payment-api_internal_schema.OrderResponse:
+    properties:
+      card_detail:
+        $ref: "#/definitions/payment-api_internal_schema.CardDetailResponse"
+      cash_back_value:
+        type: integer
+      order_id:
+        type: integer
+      phone_number:
+        type: string
+      status:
+        $ref: "#/definitions/payment-api_internal_model.PurchaseHistoryStatus"
+      total_price:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  payment-api_internal_schema.OrderUpdateRequest:
+    properties:
+      order_id:
+        type: integer
+      phone_number:
+        type: string
+      status:
+        $ref: "#/definitions/payment-api_internal_model.PurchaseHistoryStatus"
+    type: object
+  payment-api_internal_schema.Pagination:
+    properties:
+      current_page:
+        type: integer
+      total_count:
+        type: integer
+      total_page:
+        type: integer
+    type: object
+  payment-api_internal_schema.PaginationResponse:
+    properties:
+      code:
+        type: integer
+      data: {}
+      error:
+        type: string
+      message:
+        type: string
+      pagination:
+        $ref: "#/definitions/payment-api_internal_schema.Pagination"
+    type: object
+  payment-api_internal_schema.ProviderInfo:
+    properties:
+      code:
+        type: string
+      name:
+        type: string
+    type: object
+  payment-api_internal_schema.ProviderResponse:
+    properties:
+      code:
+        type: string
+      logo:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+    type: object
+  payment-api_internal_schema.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  payment-api_internal_schema.UserCreateRequest:
+    properties:
+      first_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      last_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+      phone_number:
+        maxLength: 10
+        minLength: 10
+        type: string
+    required:
+      - first_name
+      - last_name
+      - password
+      - phone_number
+    type: object
+  payment-api_internal_schema.UserLoginDetail:
+    properties:
+      id:
+        type: integer
+      password:
+        type: string
+      phone_number:
+        type: string
+    type: object
+  payment-api_internal_schema.UserLoginRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+      phone_number:
+        maxLength: 10
+        minLength: 10
+        type: string
+    required:
+      - password
+      - phone_number
+    type: object
+  payment-api_internal_schema.UserProfileResponse:
+    properties:
+      balance:
+        type: integer
+      cash_back:
+        type: integer
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      phone_number:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /card-detail:
+    get:
+      description: Get card details grouped by provider
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.CardDetailsGroupByProvider"
+      summary: Get card details grouped by provider
+      tags:
+        - card-detail
+  /card-detail/{providerCode}:
+    get:
+      description: Get card details by provider code
+      parameters:
+        - description: Provider code
+          in: path
+          name: providerCode
+          required: true
+          type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: "#/definitions/payment-api_internal_schema.CardDetailResponse"
+            type: array
+      summary: Get card details by provider code
+      tags:
+        - card-detail
+  /order/confirm:
+    post:
+      consumes:
+        - application/json
+      description: Confirm order
+      parameters:
+        - description: Order confirm request
+          in: body
+          name: orderConfirmRequest
+          required: true
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.OrderConfirmRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.OrderConfirmRequest"
+      summary: Confirm order
+      tags:
+        - order
+  /order/create:
+    post:
+      consumes:
+        - application/json
+      description: Create order
+      parameters:
+        - description: Order request
+          in: body
+          name: orderRequest
+          required: true
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.OrderRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.OrderResponse"
+      summary: Create order
+      tags:
+        - order
+  /order/update-status:
+    patch:
+      consumes:
+        - application/json
+      description: Update order status
+      parameters:
+        - description: Order update request
+          in: body
+          name: orderUpdateRequest
+          required: true
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.OrderUpdateRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.Response"
+      tags:
+        - order
+  /provider:
+    get:
+      consumes:
+        - application/json
+      description: Get providers
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: "#/definitions/payment-api_internal_schema.ProviderResponse"
+            type: array
+      summary: Get providers
+      tags:
+        - provider
+  /purchase-history/{id}:
+    get:
+      consumes:
+        - application/json
+      description: Get purchase history
+      parameters:
+        - description: User ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Page number
+          in: path
+          name: page
+          type: integer
+        - description: Page size
+          in: path
+          name: pageSize
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.PaginationResponse"
+      security:
+        - Bearer: []
+      summary: Get purchase history
+      tags:
+        - purchase-history
+  /user/{id}:
+    get:
+      consumes:
+        - application/json
+      description: Get user by ID
+      parameters:
+        - description: User ID
+          in: path
+          name: id
+          required: true
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.UserProfileResponse"
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/gin.H"
+      security:
+        - Bearer: []
+      summary: Get user by ID
+      tags:
+        - user
+  /user/create:
+    post:
+      consumes:
+        - application/json
+      description: Create user
+      parameters:
+        - description: User create details
+          in: body
+          name: user
+          required: true
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.UserCreateRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: User created successfully
+          schema:
+            type: string
+      summary: Create user
+      tags:
+        - user
+  /user/login:
+    post:
+      consumes:
+        - application/json
+      description: Login
+      parameters:
+        - description: User login request
+          in: body
+          name: user
+          required: true
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.UserLoginRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/payment-api_internal_schema.UserLoginDetail"
+      summary: Login
+      tags:
+        - user
+securityDefinitions:
+  Bearer:
+    description: Enter the token with the `Bearer` prefix, e.g., `Bearer <token>`
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

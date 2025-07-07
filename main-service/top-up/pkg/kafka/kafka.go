@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -127,9 +128,19 @@ func (k *KafkaProducer) Close() error {
 }
 
 func worker(msgCh <-chan *kafka.Message, handler func(msg *kafka.Message) error, errHandler func(err error)) {
+	defer handlePanic(errHandler)
+
 	for msg := range msgCh {
 		if err := handler(msg); err != nil && errHandler != nil {
 			errHandler(err)
+		}
+	}
+}
+
+func handlePanic(errHandler func(err error)) {
+	if r := recover(); r != nil {
+		if errHandler != nil {
+			errHandler(fmt.Errorf("worker panic recovered: %v", r))
 		}
 	}
 }

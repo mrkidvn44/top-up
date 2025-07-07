@@ -18,7 +18,6 @@ type Interface interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
 	Del(ctx context.Context, key string) error
-	GetLock(ctx context.Context, key string) bool
 	ReleaseLock(ctx context.Context, key string) error
 	TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error
 }
@@ -41,7 +40,7 @@ func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
 	return r.Client.Get(ctx, key).Result()
 }
 
-func (r *RedisClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+func (r *RedisClient) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
 	return r.Client.Set(ctx, key, value, expiration).Err()
 }
 
@@ -49,26 +48,53 @@ func (r *RedisClient) Del(ctx context.Context, key string) error {
 	return r.Client.Del(ctx, key).Err()
 }
 
-func (r *RedisClient) GetLock(ctx context.Context, key string) bool {
-	encodeKey := "lock:" + key
+func (r *RedisClient) getLock(ctx context.Context, encodeKey string) (bool, error) {
 	wasSet, err := r.Client.SetNX(ctx, encodeKey, 1, _timeOut).Result()
-	return err == nil && wasSet
+	return wasSet, err
 }
 
 func (r *RedisClient) ReleaseLock(ctx context.Context, key string) error {
-	encodeKey := "lock:" + key
-	return r.Client.Del(ctx, encodeKey).Err()
+	encodeKey := getEncodeKey(key)
+	releaseChannel := getReleashKey(encodeKey)
+	err := r.Client.Del(ctx, encodeKey).Err()
+	if err != nil {
+		return err
+	}
+
+	return r.Client.Publish(ctx, releaseChannel, "released").Err()
 }
 
 func (r *RedisClient) TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error {
 	expireTime := time.Now().Add(timeout)
+	encodeKey := getEncodeKey(key)
+	releaseChannel := getReleashKey(encodeKey)
+
+	pubsub := r.Client.Subscribe(ctx, releaseChannel)
+	defer pubsub.Close()
+
 	for {
-		if ok := r.GetLock(ctx, key); ok {
+		ok, err := r.getLock(ctx, encodeKey)
+		if err != nil {
+			return err
+		}
+		if ok {
 			return nil
 		}
-		if time.Now().After(expireTime) {
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Until(expireTime)):
 			return context.DeadlineExceeded
+		case <-pubsub.Channel():
 		}
-		time.Sleep(5 * time.Millisecond)
 	}
+}
+
+func getEncodeKey(key string) string {
+	return "lock:" + key
+}
+
+func getReleashKey(encodeKey string) string {
+	return encodeKey + ":release"
 }

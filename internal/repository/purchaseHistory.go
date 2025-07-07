@@ -45,10 +45,9 @@ func (r *PurchaseHistoryRepository) GetPurchaseHistoriesByUserIDPaginated(ctx co
 	if err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		Preload("User").
-		Preload("CardDetail").
-		Preload("CardDetail.Provider").
-		Preload("CardDetail.CardPrice").
-		Preload("CardDetail.CashBack").
+		Preload("Sku").
+		Preload("Sku.Provider").
+		Preload("Sku.CashBack").
 		Limit(pageSize).
 		Offset(offset).
 		Find(&histories).Error; err != nil {
@@ -77,10 +76,9 @@ func (r *PurchaseHistoryRepository) GetPurchaseHistoryByOrderID(ctx context.Cont
 	if err := r.db.WithContext(ctx).
 		Where("order_id = ?", order_id).
 		Preload("User").
-		Preload("CardDetail").
-		Preload("CardDetail.Provider").
-		Preload("CardDetail.CardPrice").
-		Preload("CardDetail.CashBack").
+		Preload("Sku").
+		Preload("Sku.Provider").
+		Preload("Sku.CashBack").
 		First(&purchaseHistory).Error; err != nil {
 		return nil, err
 	}

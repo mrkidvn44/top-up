@@ -12,7 +12,7 @@ service OrderService{
 message OrderConfirmRequest{
     uint64 order_id = 1;
     uint64 user_id  = 2;
-    uint64 card_detail_id = 3;
+    uint64 sku_id = 3;
     int64 total_price = 4;
     string status = 5;
     string phone_number = 6;

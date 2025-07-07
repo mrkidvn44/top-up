@@ -9,12 +9,12 @@ func PurchaseHistoryResponseFromModel(purchaseHistory *model.PurchaseHistory) *s
 	return &schema.PurchaseHistoryResponse{
 		OrderID:       purchaseHistory.OrderID,
 		UserID:        purchaseHistory.UserID,
-		CardDetailID:  purchaseHistory.CardDetailID,
+		SkuID:         purchaseHistory.SkuID,
 		TotalPrice:    purchaseHistory.TotalPrice,
 		PhoneNumber:   purchaseHistory.PhoneNumber,
 		Status:        string(purchaseHistory.Status),
 		CashBackValue: purchaseHistory.CashBackValue,
-		CardDetail:    *CardDetailResponseFromModel(purchaseHistory.CardDetail),
+		Sku:           *SkuResponseFromModel(purchaseHistory.Sku),
 	}
 }
 
@@ -22,7 +22,7 @@ func PurchaseHistoryFromOrderConfirmRequest(orderConfirmRequest schema.OrderConf
 	return &model.PurchaseHistory{
 		UserID:        orderConfirmRequest.UserID,
 		OrderID:       orderConfirmRequest.OrderID,
-		CardDetailID:  orderConfirmRequest.CardDetailID,
+		SkuID:         orderConfirmRequest.SkuID,
 		PhoneNumber:   orderConfirmRequest.PhoneNumber,
 		TotalPrice:    orderConfirmRequest.TotalPrice,
 		Status:        orderConfirmRequest.Status,

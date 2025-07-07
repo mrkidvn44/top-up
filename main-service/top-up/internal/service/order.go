@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -14,11 +13,9 @@ import (
 	"top-up-api/internal/model"
 	"top-up-api/internal/repository"
 	"top-up-api/internal/schema"
-	kfk "top-up-api/pkg/kafka"
 	"top-up-api/pkg/redis"
 	"top-up-api/pkg/util"
 
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"gorm.io/gorm"
 )
 
@@ -36,14 +33,12 @@ type IOrderService interface {
 	CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error)
 	ConfirmOrder(ctx context.Context, orderConfirmRequest schema.OrderConfirmRequest) error
 	UpdateOrderStatus(ctx context.Context, orderUpdateInfo schema.OrderUpdateRequest) error
-	StartOrderConfirmConsumer(ctx context.Context, topic, groupID string) error
 }
 
 type OrderService struct {
-	skuRepo              repository.ISkuRepository
-	purchaseHistoryRepo  repository.IPurchaseHistoryRepository
-	redisClient          redis.Interface
-	orderConfirmConsumer kfk.Consumer
+	skuRepo             repository.ISkuRepository
+	purchaseHistoryRepo repository.IPurchaseHistoryRepository
+	redisClient         redis.Interface
 }
 
 var _ IOrderService = (*OrderService)(nil)
@@ -52,13 +47,11 @@ func NewOrderService(
 	skuRepo repository.ISkuRepository,
 	purchaseHistoryRepo repository.IPurchaseHistoryRepository,
 	redisClient redis.Interface,
-	orderConfirmConsumer kfk.Consumer,
 ) *OrderService {
 	return &OrderService{
-		skuRepo:              skuRepo,
-		purchaseHistoryRepo:  purchaseHistoryRepo,
-		redisClient:          redisClient,
-		orderConfirmConsumer: orderConfirmConsumer,
+		skuRepo:             skuRepo,
+		purchaseHistoryRepo: purchaseHistoryRepo,
+		redisClient:         redisClient,
 	}
 }
 
@@ -167,24 +160,6 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo sc
 
 	if orderUpdateInfo.Status == model.PurchaseHistoryStatusFailed {
 		go sendFailedOrder(_paymentUpdateURL, orderUpdateInfo)
-	}
-
-	return nil
-}
-
-func (s *OrderService) StartOrderConfirmConsumer(ctx context.Context, topic, groupID string) error {
-	if err := s.orderConfirmConsumer.Consume(ctx, topic, groupID, func(msg *kafka.Message) error {
-		var orderConfirmRequest schema.OrderConfirmRequest
-		if err := json.Unmarshal(msg.Value, &orderConfirmRequest); err != nil {
-			fmt.Printf("failed to unmarshal order confirm event: %v \n", err)
-			return nil
-		}
-		if err := s.ConfirmOrder(ctx, orderConfirmRequest); err != nil {
-			fmt.Printf("failed to process confirm event: %v \n", err)
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("failed to start order confirm consumer: %w", err)
 	}
 
 	return nil

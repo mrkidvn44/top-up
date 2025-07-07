@@ -6,8 +6,12 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
+const (
+	_workerCount = 50
+)
+
 type Consumer interface {
-	Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error) error
+	Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error, errHandler func(err error)) error
 	Close() error
 }
 
@@ -48,21 +52,37 @@ func NewKafkaProducer(brokers string) (*KafkaProducer, error) {
 
 	return &KafkaProducer{producer: producer}, nil
 }
-func (k *KafkaConsumer) Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error) error {
+
+func (k *KafkaConsumer) Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error, errHandler func(err error)) error {
 	if err := k.consumer.SubscribeTopics([]string{topic}, nil); err != nil {
 		return err
 	}
 
+	msgCh := make(chan *kafka.Message)
+	defer close(msgCh)
+
+	for range _workerCount {
+		go worker(msgCh, handler, errHandler)
+	}
+
 	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		msg, err := k.consumer.ReadMessage(-1)
+		if err != nil {
+			if errHandler != nil {
+				errHandler(err)
+				continue
+			}
+			return err
+		}
+
 		select {
+		case msgCh <- msg:
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
-			msg, err := k.consumer.ReadMessage(-1)
-			if err != nil {
-				return err
-			}
-			go handler(msg)
 		}
 	}
 }
@@ -104,4 +124,12 @@ func (k *KafkaProducer) Close() error {
 		k.producer.Close()
 	}
 	return nil
+}
+
+func worker(msgCh <-chan *kafka.Message, handler func(msg *kafka.Message) error, errHandler func(err error)) {
+	for msg := range msgCh {
+		if err := handler(msg); err != nil && errHandler != nil {
+			errHandler(err)
+		}
+	}
 }

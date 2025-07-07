@@ -12,6 +12,7 @@ import (
 	controller "top-up-api/internal/controller/http"
 	"top-up-api/internal/db"
 	myGrpc "top-up-api/internal/grpc"
+	"top-up-api/internal/kafka/consumer"
 	"top-up-api/internal/service"
 	"top-up-api/pkg/auth"
 	"top-up-api/pkg/httpserver"
@@ -52,16 +53,17 @@ func Run(cfg *config.Config) {
 	// Services
 	services := service.NewContainer(db.Database, logger, redis, auth, validator, cfg)
 
-	// Start Kafka consumers
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	services.StartKafkaConsumers(ctx)
-
 	// Create gRPC server
 	grpcServer := grpc.NewServer()
 	grpcServices := myGrpc.NewGRPCServiceContainer(services)
 	grpcServices.Register(grpcServer)
 	go grpcServer.Serve(lis)
+
+	// Kafka consumers
+	consumers := consumer.NewConsumers(&cfg.Kafka, services)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	consumers.StartKafkaConsumers(ctx)
 
 	// HTTP Server
 	handler := gin.Default()
@@ -96,7 +98,7 @@ func Run(cfg *config.Config) {
 	}
 
 	// Kafka service
-	err = services.CloseKafka()
+	err = consumers.CloseKafkaConsumers()
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - services.CloseKafka: %w", err))
 	}

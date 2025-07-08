@@ -11,30 +11,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCardDetailService_GetCardDetailsByProviderCode(t *testing.T) {
+func TestSkuService_GetSkusByProviderCode(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		name              string
 		providerCode      string
-		setupMock         func(*mockRepo.CardDetailRepositoryMock)
-		expectedDetails   *[]model.CardDetail
+		setupMock         func(*mockRepo.SkuRepositoryMock)
+		expectedDetails   *[]model.Sku
 		expectedError     string
 		expectedNilResult bool
 	}{
 		{
 			name:         "Success",
 			providerCode: "VTL",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
-				cardDetails := &[]model.CardDetail{
-					{ProviderCode: "VTL", CardPriceCode: "CP1"},
-					{ProviderCode: "VTL", CardPriceCode: "CP2"},
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
+				skus := &[]model.Sku{
+					{ProviderCode: "VTL"},
+					{ProviderCode: "VTL"},
 				}
 				m.ExpectedCalls = nil
-				m.On("GetCardDetailsByProviderCode", ctx, "VTL").Return(cardDetails, nil)
+				m.On("GetSkusByProviderCode", ctx, "VTL").Return(skus, nil)
 			},
-			expectedDetails: &[]model.CardDetail{
-				{ProviderCode: "VTL", CardPriceCode: "CP1"},
-				{ProviderCode: "VTL", CardPriceCode: "CP2"},
+			expectedDetails: &[]model.Sku{
+				{ProviderCode: "VTL"},
+				{ProviderCode: "VTL"},
 			},
 			expectedError:     "",
 			expectedNilResult: false,
@@ -42,9 +42,9 @@ func TestCardDetailService_GetCardDetailsByProviderCode(t *testing.T) {
 		{
 			name:         "Repository error",
 			providerCode: "VTL",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				m.ExpectedCalls = nil
-				m.On("GetCardDetailsByProviderCode", ctx, "VTL").Return(nil, errors.New("db error"))
+				m.On("GetSkusByProviderCode", ctx, "VTL").Return(nil, errors.New("db error"))
 			},
 			expectedDetails:   nil,
 			expectedError:     "db error",
@@ -53,21 +53,21 @@ func TestCardDetailService_GetCardDetailsByProviderCode(t *testing.T) {
 		{
 			name:         "No record",
 			providerCode: "VTL",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
-				empty := &[]model.CardDetail{}
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
+				empty := &[]model.Sku{}
 				m.ExpectedCalls = nil
-				m.On("GetCardDetailsByProviderCode", ctx, "VTL").Return(empty, nil)
+				m.On("GetSkusByProviderCode", ctx, "VTL").Return(empty, nil)
 			},
-			expectedDetails:   &[]model.CardDetail{},
+			expectedDetails:   &[]model.Sku{},
 			expectedError:     "",
 			expectedNilResult: false,
 		},
 		{
 			name:         "Nil from repo",
 			providerCode: "VTL",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				m.ExpectedCalls = nil
-				m.On("GetCardDetailsByProviderCode", ctx, "VTL").Return(nil, nil)
+				m.On("GetSkusByProviderCode", ctx, "VTL").Return(nil, nil)
 			},
 			expectedDetails:   nil,
 			expectedError:     "",
@@ -77,10 +77,10 @@ func TestCardDetailService_GetCardDetailsByProviderCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(mockRepo.CardDetailRepositoryMock)
+			mockRepo := new(mockRepo.SkuRepositoryMock)
 			tt.setupMock(mockRepo)
-			svc := service.NewCardDetailService(mockRepo)
-			got, err := svc.GetCardDetailsByProviderCode(ctx, tt.providerCode)
+			svc := service.NewSkuService(mockRepo)
+			got, err := svc.GetSkusByProviderCode(ctx, tt.providerCode)
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err.Error())
@@ -97,32 +97,30 @@ func TestCardDetailService_GetCardDetailsByProviderCode(t *testing.T) {
 	}
 }
 
-func TestCardDetailService_GetCardDetailsGroupByProvider(t *testing.T) {
+func TestSkuService_GetSkusGroupByProvider(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		name           string
-		setupMock      func(*mockRepo.CardDetailRepositoryMock)
-		expectedResult *[]model.CardDetail
+		setupMock      func(*mockRepo.SkuRepositoryMock)
+		expectedResult *[]model.Sku
 		expectedError  string
 		expectedNil    bool
 	}{
 		{
 			name: "Success",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
-				cardDetails := &[]model.CardDetail{
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
+				skus := &[]model.Sku{
 					{
-						ProviderCode:  "VTL",
-						CardPriceCode: "CP1",
-						Provider:      model.Provider{Code: "VTL", Name: "Viettel", LogoUrl: "logo1"},
+						ProviderCode: "VTL",
+						Provider:     model.Provider{Code: "VTL", Name: "Viettel", LogoUrl: "logo1"},
 					},
 					{
-						ProviderCode:  "MBF",
-						CardPriceCode: "CP2",
-						Provider:      model.Provider{Code: "MBF", Name: "Mobifone", LogoUrl: "logo2"},
+						ProviderCode: "MBF",
+						Provider:     model.Provider{Code: "MBF", Name: "Mobifone", LogoUrl: "logo2"},
 					},
 				}
 				m.ExpectedCalls = nil
-				m.On("GetCardDetails", ctx).Return(cardDetails, nil)
+				m.On("GetSkus", ctx).Return(skus, nil)
 			},
 			expectedResult: nil,
 			expectedError:  "",
@@ -130,9 +128,9 @@ func TestCardDetailService_GetCardDetailsGroupByProvider(t *testing.T) {
 		},
 		{
 			name: "Repository error",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				m.ExpectedCalls = nil
-				m.On("GetCardDetails", ctx).Return(nil, errors.New("db error"))
+				m.On("GetSkus", ctx).Return(nil, errors.New("db error"))
 			},
 			expectedResult: nil,
 			expectedError:  "db error",
@@ -140,10 +138,10 @@ func TestCardDetailService_GetCardDetailsGroupByProvider(t *testing.T) {
 		},
 		{
 			name: "No record",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
-				empty := &[]model.CardDetail{}
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
+				empty := &[]model.Sku{}
 				m.ExpectedCalls = nil
-				m.On("GetCardDetails", ctx).Return(empty, nil)
+				m.On("GetSkus", ctx).Return(empty, nil)
 			},
 			expectedResult: nil,
 			expectedError:  "",
@@ -151,9 +149,9 @@ func TestCardDetailService_GetCardDetailsGroupByProvider(t *testing.T) {
 		},
 		{
 			name: "Nil from repo",
-			setupMock: func(m *mockRepo.CardDetailRepositoryMock) {
+			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				m.ExpectedCalls = nil
-				m.On("GetCardDetails", ctx).Return(nil, nil)
+				m.On("GetSkus", ctx).Return(nil, nil)
 			},
 			expectedResult: nil,
 			expectedError:  "",
@@ -163,10 +161,10 @@ func TestCardDetailService_GetCardDetailsGroupByProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(mockRepo.CardDetailRepositoryMock)
+			mockRepo := new(mockRepo.SkuRepositoryMock)
 			tt.setupMock(mockRepo)
-			svc := service.NewCardDetailService(mockRepo)
-			got, err := svc.GetCardDetailsGroupByProvider(ctx)
+			svc := service.NewSkuService(mockRepo)
+			got, err := svc.GetSkusGroupByProvider(ctx)
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err.Error())

@@ -26,7 +26,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/top-up-api_internal_schema.CardDetailsGroupByProvider"
+                            "$ref": "#/definitions/top-up-api_internal_schema.SkusGroupByProvider"
                         }
                     }
                 }
@@ -54,7 +54,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/top-up-api_internal_schema.CardDetailResponse"
+                                "$ref": "#/definitions/top-up-api_internal_schema.SkuResponse"
                             }
                         }
                     }
@@ -193,7 +193,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/purchase-history/{id}": {
+        "/purchase-history/{user_id}": {
             "get": {
                 "security": [
                     {
@@ -215,7 +215,7 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "User ID",
-                        "name": "id",
+                        "name": "user_id",
                         "in": "path",
                         "required": true
                     },
@@ -374,70 +374,9 @@ const docTemplate = `{
                 "PurchaseHistoryStatusFailed"
             ]
         },
-        "top-up-api_internal_schema.CardDetailMiniatureResponse": {
-            "type": "object",
-            "properties": {
-                "card_price": {
-                    "$ref": "#/definitions/top-up-api_internal_schema.CardPriceResponse"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "provider": {}
-            }
-        },
-        "top-up-api_internal_schema.CardDetailResponse": {
-            "type": "object",
-            "properties": {
-                "card_price": {
-                    "$ref": "#/definitions/top-up-api_internal_schema.CardPriceResponse"
-                },
-                "cash_back": {},
-                "id": {
-                    "type": "integer"
-                },
-                "provider": {
-                    "$ref": "#/definitions/top-up-api_internal_schema.ProviderInfo"
-                }
-            }
-        },
-        "top-up-api_internal_schema.CardDetailsGroupByProvider": {
-            "type": "object",
-            "properties": {
-                "card_details": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/top-up-api_internal_schema.CardDetailMiniatureResponse"
-                    }
-                },
-                "provider_code": {
-                    "type": "string"
-                },
-                "provider_logo_url": {
-                    "type": "string"
-                },
-                "provider_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "top-up-api_internal_schema.CardPriceResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "integer"
-                }
-            }
-        },
         "top-up-api_internal_schema.OrderConfirmRequest": {
             "type": "object",
             "properties": {
-                "card_detail_id": {
-                    "type": "integer"
-                },
                 "cash_back_value": {
                     "type": "integer"
                 },
@@ -446,6 +385,9 @@ const docTemplate = `{
                 },
                 "phone_number": {
                     "type": "string"
+                },
+                "sku_id": {
+                    "type": "integer"
                 },
                 "status": {
                     "$ref": "#/definitions/top-up-api_internal_model.PurchaseHistoryStatus"
@@ -461,11 +403,11 @@ const docTemplate = `{
         "top-up-api_internal_schema.OrderRequest": {
             "type": "object",
             "properties": {
-                "card_detail_id": {
-                    "type": "integer"
-                },
                 "phone_number": {
                     "type": "string"
+                },
+                "sku_id": {
+                    "type": "integer"
                 },
                 "user_id": {
                     "type": "integer"
@@ -475,9 +417,6 @@ const docTemplate = `{
         "top-up-api_internal_schema.OrderResponse": {
             "type": "object",
             "properties": {
-                "card_detail": {
-                    "$ref": "#/definitions/top-up-api_internal_schema.CardDetailResponse"
-                },
                 "cash_back_value": {
                     "type": "integer"
                 },
@@ -486,6 +425,9 @@ const docTemplate = `{
                 },
                 "phone_number": {
                     "type": "string"
+                },
+                "sku": {
+                    "$ref": "#/definitions/top-up-api_internal_schema.SkuResponse"
                 },
                 "status": {
                     "$ref": "#/definitions/top-up-api_internal_model.PurchaseHistoryStatus"
@@ -584,6 +526,53 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "top-up-api_internal_schema.SkuMiniatureResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "provider": {}
+            }
+        },
+        "top-up-api_internal_schema.SkuResponse": {
+            "type": "object",
+            "properties": {
+                "cash_back": {},
+                "id": {
+                    "type": "integer"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "provider": {
+                    "$ref": "#/definitions/top-up-api_internal_schema.ProviderInfo"
+                }
+            }
+        },
+        "top-up-api_internal_schema.SkusGroupByProvider": {
+            "type": "object",
+            "properties": {
+                "provider_code": {
+                    "type": "string"
+                },
+                "provider_logo_url": {
+                    "type": "string"
+                },
+                "provider_name": {
+                    "type": "string"
+                },
+                "sku": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/top-up-api_internal_schema.SkuMiniatureResponse"
+                    }
                 }
             }
         },

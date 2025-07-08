@@ -74,6 +74,11 @@ type (
 
 	Grpc struct {
 		Port string `mapstructure:"port"`
+		GrpcClient `mapstructure:"client"`
+	}
+
+	GrpcClient struct {
+		Auth string `mapstructure:"auth_url"`
 	}
 )
 

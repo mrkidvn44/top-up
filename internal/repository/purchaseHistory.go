@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type IPurchaseHistoryRepository interface {
+type PurchaseHistoryRepository interface {
 	CreatePurchaseHistory(ctx context.Context, purchaseHistory *model.PurchaseHistory) error
 	GetPurchaseHistoriesByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) ([]model.PurchaseHistory, int64, error)
 	GetPurchaseHistoryByID(ctx context.Context, id uint) (*model.PurchaseHistory, error)
@@ -15,21 +15,21 @@ type IPurchaseHistoryRepository interface {
 	GetPurchaseHistoryByOrderID(ctx context.Context, order_id uint) (*model.PurchaseHistory, error)
 }
 
-type PurchaseHistoryRepository struct {
+type purchaseHistoryRepository struct {
 	db *gorm.DB
 }
 
-var _ IPurchaseHistoryRepository = (*PurchaseHistoryRepository)(nil)
+var _ PurchaseHistoryRepository = (*purchaseHistoryRepository)(nil)
 
-func NewPurchaseHistoryRepository(db *gorm.DB) *PurchaseHistoryRepository {
-	return &PurchaseHistoryRepository{db: db}
+func NewPurchaseHistoryRepository(db *gorm.DB) *purchaseHistoryRepository {
+	return &purchaseHistoryRepository{db: db}
 }
 
-func (r *PurchaseHistoryRepository) CreatePurchaseHistory(ctx context.Context, purchaseHistory *model.PurchaseHistory) error {
+func (r *purchaseHistoryRepository) CreatePurchaseHistory(ctx context.Context, purchaseHistory *model.PurchaseHistory) error {
 	return r.db.WithContext(ctx).Create(purchaseHistory).Error
 }
 
-func (r *PurchaseHistoryRepository) GetPurchaseHistoriesByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) ([]model.PurchaseHistory, int64, error) {
+func (r *purchaseHistoryRepository) GetPurchaseHistoriesByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) ([]model.PurchaseHistory, int64, error) {
 	var histories []model.PurchaseHistory
 	var total int64
 
@@ -45,10 +45,9 @@ func (r *PurchaseHistoryRepository) GetPurchaseHistoriesByUserIDPaginated(ctx co
 	if err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		Preload("User").
-		Preload("CardDetail").
-		Preload("CardDetail.Provider").
-		Preload("CardDetail.CardPrice").
-		Preload("CardDetail.CashBack").
+		Preload("Sku").
+		Preload("Sku.Provider").
+		Preload("Sku.CashBack").
 		Limit(pageSize).
 		Offset(offset).
 		Find(&histories).Error; err != nil {
@@ -58,7 +57,7 @@ func (r *PurchaseHistoryRepository) GetPurchaseHistoriesByUserIDPaginated(ctx co
 	return histories, total, nil
 }
 
-func (r *PurchaseHistoryRepository) GetPurchaseHistoryByID(ctx context.Context, id uint) (*model.PurchaseHistory, error) {
+func (r *purchaseHistoryRepository) GetPurchaseHistoryByID(ctx context.Context, id uint) (*model.PurchaseHistory, error) {
 	var purchaseHistory model.PurchaseHistory
 	if err := r.db.WithContext(ctx).Where("order_id = ?", id).First(&purchaseHistory).Error; err != nil {
 		return nil, err
@@ -66,21 +65,20 @@ func (r *PurchaseHistoryRepository) GetPurchaseHistoryByID(ctx context.Context, 
 	return &purchaseHistory, nil
 }
 
-func (r *PurchaseHistoryRepository) UpdatePurchaseHistoryStatusByOrderID(ctx context.Context, order_id uint, status model.PurchaseHistoryStatus) error {
+func (r *purchaseHistoryRepository) UpdatePurchaseHistoryStatusByOrderID(ctx context.Context, order_id uint, status model.PurchaseHistoryStatus) error {
 	return r.db.WithContext(ctx).Model(&model.PurchaseHistory{}).
 		Where("order_id = ?", order_id).
 		Update("status", status).Error
 }
 
-func (r *PurchaseHistoryRepository) GetPurchaseHistoryByOrderID(ctx context.Context, order_id uint) (*model.PurchaseHistory, error) {
+func (r *purchaseHistoryRepository) GetPurchaseHistoryByOrderID(ctx context.Context, order_id uint) (*model.PurchaseHistory, error) {
 	var purchaseHistory model.PurchaseHistory
 	if err := r.db.WithContext(ctx).
 		Where("order_id = ?", order_id).
 		Preload("User").
-		Preload("CardDetail").
-		Preload("CardDetail.Provider").
-		Preload("CardDetail.CardPrice").
-		Preload("CardDetail.CashBack").
+		Preload("Sku").
+		Preload("Sku.Provider").
+		Preload("Sku.CashBack").
 		First(&purchaseHistory).Error; err != nil {
 		return nil, err
 	}

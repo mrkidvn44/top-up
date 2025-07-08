@@ -12,11 +12,11 @@ import (
 )
 
 type ProviderRouter struct {
-	service service.IProviderService
+	service service.ProviderService
 	logger  logger.Interface
 }
 
-func NewProviderRouter(handler *gin.RouterGroup, s service.IProviderService, l logger.Interface) {
+func NewProviderRouter(handler *gin.RouterGroup, s service.ProviderService, l logger.Interface) {
 	h := &ProviderRouter{service: s, logger: l}
 	providerRoutes := handler.Group("/provider")
 	{

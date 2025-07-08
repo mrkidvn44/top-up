@@ -17,13 +17,13 @@ type Interface interface {
 	Fatal(message string, args ...zap.Field)
 }
 
-type Logger struct {
+type zapLogger struct {
 	logger *zap.Logger
 }
 
-var _ Interface = (*Logger)(nil)
+var _ Interface = (*zapLogger)(nil)
 
-func New(level string, env string) *Logger {
+func New(level string, env string) *zapLogger {
 	l := new(zapcore.Level)
 	switch level {
 	case "debug":
@@ -33,11 +33,17 @@ func New(level string, env string) *Logger {
 	case "warn":
 	}
 	config := new(zap.Config)
+
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.TimeKey = "timestamp"
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.StacktraceKey = ""
+
 	if env == "PROD" {
 		config = &zap.Config{
 			Level:            zap.NewAtomicLevelAt(*l),
 			Encoding:         "json",
-			EncoderConfig:    zap.NewProductionEncoderConfig(),
+			EncoderConfig:    encoderConfig,
 			OutputPaths:      []string{"./.log/server.log"},
 			ErrorOutputPaths: []string{"./.log/server.log"},
 		}
@@ -62,34 +68,34 @@ func New(level string, env string) *Logger {
 		config = &zap.Config{
 			Level:            zap.NewAtomicLevelAt(*l),
 			Encoding:         "json",
-			EncoderConfig:    zap.NewProductionEncoderConfig(),
+			EncoderConfig:    encoderConfig,
 			OutputPaths:      []string{"stdout"},
 			ErrorOutputPaths: []string{"stderr"},
 		}
 	}
-	logger := zap.Must(config.Build())
+	logger := zap.Must(config.Build(zap.AddCallerSkip(1)))
 
-	return &Logger{
+	return &zapLogger{
 		logger: logger,
 	}
 }
 
-func (l *Logger) Debug(message string, args ...zap.Field) {
+func (l *zapLogger) Debug(message string, args ...zap.Field) {
 	l.logger.Debug(message, args...)
 }
 
-func (l *Logger) Info(message string, args ...zap.Field) {
+func (l *zapLogger) Info(message string, args ...zap.Field) {
 	l.logger.Info(message, args...)
 }
 
-func (l *Logger) Warn(message string, args ...zap.Field) {
+func (l *zapLogger) Warn(message string, args ...zap.Field) {
 	l.logger.Warn(message, args...)
 }
 
-func (l *Logger) Error(message error, args ...zap.Field) {
+func (l *zapLogger) Error(message error, args ...zap.Field) {
 	l.logger.Error(message.Error(), args...)
 }
 
-func (l *Logger) Fatal(message string, args ...zap.Field) {
+func (l *zapLogger) Fatal(message string, args ...zap.Field) {
 	l.logger.Fatal(message, args...)
 }

@@ -8,22 +8,22 @@ import (
 	"top-up-api/internal/schema"
 )
 
-type IPurchaseHistoryService interface {
+type PurchaseHistoryService interface {
 	GetPurchaseHistoriesByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) (*schema.PaginationResponse, error)
 	GetPurchaseHistoryByID(ctx context.Context, id uint) (*model.PurchaseHistory, error)
 }
 
-type PurchaseHistoryService struct {
-	repo repository.IPurchaseHistoryRepository
+type purchaseHistoryService struct {
+	repo repository.PurchaseHistoryRepository
 }
 
-var _ IPurchaseHistoryService = (*PurchaseHistoryService)(nil)
+var _ PurchaseHistoryService = (*purchaseHistoryService)(nil)
 
-func NewPurchaseHistoryService(repo repository.IPurchaseHistoryRepository) *PurchaseHistoryService {
-	return &PurchaseHistoryService{repo: repo}
+func NewPurchaseHistoryService(repo repository.PurchaseHistoryRepository) *purchaseHistoryService {
+	return &purchaseHistoryService{repo: repo}
 }
 
-func (s *PurchaseHistoryService) GetPurchaseHistoriesByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) (*schema.PaginationResponse, error) {
+func (s *purchaseHistoryService) GetPurchaseHistoriesByUserIDPaginated(ctx context.Context, userID uint, page, pageSize int) (*schema.PaginationResponse, error) {
 	histories, total, err := s.repo.GetPurchaseHistoriesByUserIDPaginated(ctx, userID, page, pageSize)
 	if err != nil {
 		return nil, err
@@ -43,6 +43,6 @@ func (s *PurchaseHistoryService) GetPurchaseHistoriesByUserIDPaginated(ctx conte
 	), nil
 }
 
-func (s *PurchaseHistoryService) GetPurchaseHistoryByID(ctx context.Context, id uint) (*model.PurchaseHistory, error) {
+func (s *purchaseHistoryService) GetPurchaseHistoryByID(ctx context.Context, id uint) (*model.PurchaseHistory, error) {
 	return s.repo.GetPurchaseHistoryByID(ctx, id)
 }

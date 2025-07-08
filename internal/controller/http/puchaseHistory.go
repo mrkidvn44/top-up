@@ -3,21 +3,21 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	grpcClient "top-up-api/internal/grpc/client"
 	"top-up-api/internal/mapper"
 	"top-up-api/internal/service"
-	"top-up-api/pkg/auth"
 	"top-up-api/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )
 
 type PurchaseHistoryRouter struct {
-	service service.IPurchaseHistoryService
+	service service.PurchaseHistoryService
 	logger  logger.Interface
-	auth    auth.Interface
+	auth    grpcClient.AuthGRPCClient
 }
 
-func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.IPurchaseHistoryService, l logger.Interface, a auth.Interface) {
+func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.PurchaseHistoryService, a grpcClient.AuthGRPCClient, l logger.Interface) {
 	h := &PurchaseHistoryRouter{service: s, logger: l, auth: a}
 	handler.GET("/purchase-history/:user_id", h.GetPurchaseHistory)
 }
@@ -29,21 +29,22 @@ func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.IPurchaseHisto
 // @Tags purchase-history
 // @Accept json
 // @Produce json
-// @Param id path int true "User ID"
+// @Param user_id path int true "User ID"
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
 // @Security Bearer
 // @Success 200 {object} top-up-api_internal_schema.PaginationResponse
 // @Router /purchase-history/{user_id} [get]
 func (h *PurchaseHistoryRouter) GetPurchaseHistory(c *gin.Context) {
-	token, err := h.auth.AuthenticateService(c)
+	token := c.GetHeader("Authorization")
+	userID, err := strconv.ParseUint(c.Param("user_id"), 10, 64)
 	if err != nil {
 		h.logger.Error(err)
-		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
+		c.JSON(http.StatusBadRequest, mapper.ErrorResponse(http.StatusBadRequest, "Invalid request", err.Error()))
 		return
 	}
 
-	userID, err := h.auth.ValidateUserIDFromToken(token, c.Param("user_id"))
+	err = h.auth.AuthenticateService(c, mapper.ToAuthRequest(token, userID))
 	if err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
@@ -64,7 +65,7 @@ func (h *PurchaseHistoryRouter) GetPurchaseHistory(c *gin.Context) {
 		return
 	}
 
-	paginatedResponse, err := h.service.GetPurchaseHistoriesByUserIDPaginated(c, userID, page, pageSize)
+	paginatedResponse, err := h.service.GetPurchaseHistoriesByUserIDPaginated(c, uint(userID), page, pageSize)
 	if err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusInternalServerError, mapper.ErrorResponse(http.StatusInternalServerError, "Internal Server Error", err.Error()))

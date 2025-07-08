@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package auth;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "proto/auth;authpb";
+
+message AuthenticateServiceRequest {
+  string token_string = 1;
+  uint64 user_id = 2;
+}
+
+service AuthService {
+  rpc AuthenticateService(AuthenticateServiceRequest) returns (google.protobuf.Empty);
+}

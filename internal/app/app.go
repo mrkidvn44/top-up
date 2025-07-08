@@ -11,9 +11,10 @@ import (
 	"top-up-api/config"
 	controller "top-up-api/internal/controller/http"
 	"top-up-api/internal/db"
-	myGrpc "top-up-api/internal/grpc"
+	grpcClient "top-up-api/internal/grpc/client"
+	grpcServers "top-up-api/internal/grpc/server"
+	"top-up-api/internal/kafka/consumer"
 	"top-up-api/internal/service"
-	"top-up-api/pkg/auth"
 	"top-up-api/pkg/httpserver"
 	"top-up-api/pkg/logger"
 	"top-up-api/pkg/redis"
@@ -35,37 +36,44 @@ func Run(cfg *config.Config) {
 		panic(err)
 	}
 
-	lis, err := net.Listen("tcp", ":"+cfg.Grpc.Port)
+	// gRPC Client
+	grpcClients, err := grpcClient.NewGRPCServiceClient(cfg.GrpcClient)
 	if err != nil {
-		logger.Error(fmt.Errorf("app - Run - net.Listen: %w", err))
+		logger.Error(fmt.Errorf("app - Run - grpcClients.NewGRPCServiceClient: %w", err))
 		os.Exit(1)
 	}
+	defer grpcClients.CloseConnection()
+
 	// Validator
 	validator := validator.NewValidator()
 
 	// Middleware
 	redis := redis.NewRedis(cfg.Redis)
 	logger.Info(fmt.Sprintf("redis connected to %s", redis))
-	auth := auth.NewAuthService([]byte(cfg.JWT.Secret))
-	logger.Info(fmt.Sprintf("auth service %s", auth))
 
 	// Services
-	services := service.NewContainer(db.Database, logger, redis, auth, validator, cfg)
-
-	// Start Kafka consumers
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	services.StartKafkaConsumers(ctx)
+	services := service.NewContainer(db.Database, logger, redis, validator, cfg)
 
 	// Create gRPC server
+	lis, err := net.Listen("tcp", ":"+cfg.Grpc.Port)
+	if err != nil {
+		logger.Error(fmt.Errorf("app - Run - net.Listen: %w", err))
+		os.Exit(1)
+	}
 	grpcServer := grpc.NewServer()
-	grpcServices := myGrpc.NewGRPCServiceContainer(services)
+	grpcServices := grpcServers.NewGRPCServiceServer(services)
 	grpcServices.Register(grpcServer)
 	go grpcServer.Serve(lis)
 
+	// Kafka consumers
+	consumers := consumer.NewConsumers(&cfg.Kafka, services)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	consumers.StartKafkaConsumers(ctx)
+
 	// HTTP Server
 	handler := gin.Default()
-	controller.NewRouter(handler, services)
+	controller.NewRouter(handler, services, grpcClients)
 
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 	// Waiting signal
@@ -96,7 +104,7 @@ func Run(cfg *config.Config) {
 	}
 
 	// Kafka service
-	err = services.CloseKafka()
+	err = consumers.CloseKafkaConsumers()
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - services.CloseKafka: %w", err))
 	}
@@ -106,6 +114,7 @@ func Run(cfg *config.Config) {
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - db.Close: %w", err))
 	}
-
-	time.Sleep(_waitTime)
+	if cfg.Env != "dev" {
+		time.Sleep(_waitTime)
+	}
 }

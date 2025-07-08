@@ -25,7 +25,7 @@ type OrderConfirmRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OrderId       uint64                 `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	UserId        uint64                 `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	CardDetailId  uint64                 `protobuf:"varint,3,opt,name=card_detail_id,json=cardDetailId,proto3" json:"card_detail_id,omitempty"`
+	SkuId         uint64                 `protobuf:"varint,3,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
 	TotalPrice    int64                  `protobuf:"varint,4,opt,name=total_price,json=totalPrice,proto3" json:"total_price,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	PhoneNumber   string                 `protobuf:"bytes,6,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`
@@ -78,9 +78,9 @@ func (x *OrderConfirmRequest) GetUserId() uint64 {
 	return 0
 }
 
-func (x *OrderConfirmRequest) GetCardDetailId() uint64 {
+func (x *OrderConfirmRequest) GetSkuId() uint64 {
 	if x != nil {
-		return x.CardDetailId
+		return x.SkuId
 	}
 	return 0
 }
@@ -169,11 +169,11 @@ var File_proto_order_proto protoreflect.FileDescriptor
 
 const file_proto_order_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/order.proto\x12\x05order\"\xf3\x01\n" +
+	"\x11proto/order.proto\x12\x05order\"\xe4\x01\n" +
 	"\x13OrderConfirmRequest\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\x04R\aorderId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\x04R\x06userId\x12$\n" +
-	"\x0ecard_detail_id\x18\x03 \x01(\x04R\fcardDetailId\x12\x1f\n" +
+	"\auser_id\x18\x02 \x01(\x04R\x06userId\x12\x15\n" +
+	"\x06sku_id\x18\x03 \x01(\x04R\x05skuId\x12\x1f\n" +
 	"\vtotal_price\x18\x04 \x01(\x03R\n" +
 	"totalPrice\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12!\n" +

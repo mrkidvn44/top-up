@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"net/http"
 	docs "top-up-api/docs"
 	"top-up-api/internal/service"
 
@@ -11,6 +12,14 @@ import (
 )
 
 func NewRouter(handler *gin.Engine, services *service.Container) {
+	// Health check endpoint
+	handler.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "ok",
+			"message": "Service is healthy",
+		})
+	})
+
 	// Swagger
 	docs.SwaggerInfo.BasePath = "/v1/api"
 	swaggerHandler := ginSwagger.DisablingWrapHandler(swaggerFiles.Handler, "DISABLE_SWAGGER_HTTP_HANDLER")

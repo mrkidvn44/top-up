@@ -9,10 +9,10 @@ import (
 
 type OrderGRPCServer struct {
 	pb.UnimplementedOrderServiceServer
-	orderService *service.OrderService
+	orderService service.IOrderService
 }
 
-func NewOrderGRPCServer(orderService *service.OrderService) *OrderGRPCServer {
+func NewOrderGRPCServer(orderService service.IOrderService) *OrderGRPCServer {
 	return &OrderGRPCServer{
 		orderService: orderService,
 	}

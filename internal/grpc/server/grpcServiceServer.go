@@ -7,17 +7,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-type GRPCServiceContainer struct {
+type GRPCServiceServer struct {
 	OrderGRPCServer *OrderGRPCServer
 }
 
-func NewGRPCServiceContainer(services *service.Container) *GRPCServiceContainer {
-	return &GRPCServiceContainer{
+func NewGRPCServiceServer(services *service.Container) *GRPCServiceServer {
+	return &GRPCServiceServer{
 		OrderGRPCServer: NewOrderGRPCServer(services.OrderService),
 	}
 }
 
 // Register registers all gRPC servers to the given gRPC server.
-func (c *GRPCServiceContainer) Register(server grpc.ServiceRegistrar) {
+func (c *GRPCServiceServer) Register(server grpc.ServiceRegistrar) {
 	pb.RegisterOrderServiceServer(server, c.OrderGRPCServer)
 }

@@ -3,13 +3,13 @@ package controller
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"top-up-api/internal/mapper"
 	"top-up-api/internal/schema"
 	"top-up-api/internal/service"
-	"top-up-api/pkg/auth"
 	"top-up-api/pkg/logger"
 	"top-up-api/pkg/validator"
+
+	grpcClient "top-up-api/internal/grpc/client"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -17,13 +17,13 @@ import (
 
 type OrderRouter struct {
 	service   service.IOrderService
+	auth      grpcClient.IAuthGRPCClient
 	logger    logger.Interface
-	auth      auth.Interface
 	validator validator.Interface
 }
 
-func NewOrderRouter(handler *gin.RouterGroup, s service.IOrderService, l logger.Interface, a auth.Interface, v validator.Interface) {
-	h := &OrderRouter{service: s, logger: l, auth: a, validator: v}
+func NewOrderRouter(handler *gin.RouterGroup, s service.IOrderService, a grpcClient.IAuthGRPCClient, l logger.Interface, v validator.Interface) {
+	h := &OrderRouter{service: s, auth: a, logger: l, validator: v}
 	orderRoutes := handler.Group("/order")
 	{
 		orderRoutes.POST("/create", h.CreateOrder)
@@ -51,14 +51,8 @@ func (h *OrderRouter) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	token, err := h.auth.AuthenticateService(c)
-	if err != nil {
-		h.logger.Error(err)
-		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))
-		return
-	}
-
-	_, err = h.auth.ValidateUserIDFromToken(token, strconv.Itoa(int(orderRequest.UserID)))
+	token := c.GetHeader("Authorization")
+	err := h.auth.AuthenticateService(c, mapper.ToAuthRequest(token, uint64(orderRequest.UserID)))
 	if err != nil {
 		h.logger.Error(err)
 		c.JSON(http.StatusUnauthorized, mapper.ErrorResponse(http.StatusUnauthorized, "Unauthorized", err.Error()))

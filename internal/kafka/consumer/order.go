@@ -16,11 +16,11 @@ import (
 
 type OrderConsumer struct {
 	logger   logger.Interface
-	service  service.IOrderService
+	service  service.OrderService
 	consumer kfk.Consumer
 }
 
-func NewOrderConsumer(l logger.Interface, s service.IOrderService, c kfk.Consumer) *OrderConsumer {
+func NewOrderConsumer(l logger.Interface, s service.OrderService, c kfk.Consumer) *OrderConsumer {
 	return &OrderConsumer{logger: l, service: s, consumer: c}
 }
 

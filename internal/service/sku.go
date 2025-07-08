@@ -7,22 +7,22 @@ import (
 	"top-up-api/internal/schema"
 )
 
-type ISkuService interface {
+type SkuService interface {
 	GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]schema.SkuResponse, error)
 	GetSkusGroupByProvider(ctx context.Context) (*[]schema.SkusGroupByProvider, error)
 }
 
-type SkuService struct {
-	repo repository.ISkuRepository
+type skuService struct {
+	repo repository.SkuRepository
 }
 
-var _ ISkuService = (*SkuService)(nil)
+var _ SkuService = (*skuService)(nil)
 
-func NewSkuService(repo repository.ISkuRepository) *SkuService {
-	return &SkuService{repo: repo}
+func NewSkuService(repo repository.SkuRepository) *skuService {
+	return &skuService{repo: repo}
 }
 
-func (s *SkuService) GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]schema.SkuResponse, error) {
+func (s *skuService) GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]schema.SkuResponse, error) {
 	skus, err := s.repo.GetSkusByProviderCode(ctx, providerCode)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (s *SkuService) GetSkusByProviderCode(ctx context.Context, providerCode str
 	return &skuResponses, nil
 }
 
-func (s *SkuService) GetSkusGroupByProvider(ctx context.Context) (*[]schema.SkusGroupByProvider, error) {
+func (s *skuService) GetSkusGroupByProvider(ctx context.Context) (*[]schema.SkusGroupByProvider, error) {
 	skus, err := s.repo.GetSkus(ctx)
 	if err != nil {
 		return nil, err

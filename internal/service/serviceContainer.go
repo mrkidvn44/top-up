@@ -20,10 +20,10 @@ type Container struct {
 	Validator validator.Interface
 
 	// Services
-	ProviderService        IProviderService
-	SkuService             ISkuService
-	PurchaseHistoryService IPurchaseHistoryService
-	OrderService           IOrderService
+	ProviderService        ProviderService
+	SkuService             SkuService
+	PurchaseHistoryService PurchaseHistoryService
+	OrderService           OrderService
 }
 
 // NewContainer creates and initializes all dependencies

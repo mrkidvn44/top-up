@@ -29,33 +29,33 @@ const (
 	_callbackURL      = "http://localhost:8080/v1/api/order/update-status"
 )
 
-type IOrderService interface {
+type OrderService interface {
 	CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error)
 	ConfirmOrder(ctx context.Context, orderConfirmRequest schema.OrderConfirmRequest) error
 	UpdateOrderStatus(ctx context.Context, orderUpdateInfo schema.OrderUpdateRequest) error
 }
 
-type OrderService struct {
-	skuRepo             repository.ISkuRepository
-	purchaseHistoryRepo repository.IPurchaseHistoryRepository
+type orderService struct {
+	skuRepo             repository.SkuRepository
+	purchaseHistoryRepo repository.PurchaseHistoryRepository
 	redisClient         redis.Interface
 }
 
-var _ IOrderService = (*OrderService)(nil)
+var _ OrderService = (*orderService)(nil)
 
 func NewOrderService(
-	skuRepo repository.ISkuRepository,
-	purchaseHistoryRepo repository.IPurchaseHistoryRepository,
+	skuRepo repository.SkuRepository,
+	purchaseHistoryRepo repository.PurchaseHistoryRepository,
 	redisClient redis.Interface,
-) *OrderService {
-	return &OrderService{
+) *orderService {
+	return &orderService{
 		skuRepo:             skuRepo,
 		purchaseHistoryRepo: purchaseHistoryRepo,
 		redisClient:         redisClient,
 	}
 }
 
-func (s *OrderService) CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error) {
+func (s *orderService) CreateOrder(ctx context.Context, order schema.OrderRequest) (*schema.OrderResponse, error) {
 	sku, err := s.skuRepo.GetSkuByID(ctx, order.SkuID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -83,7 +83,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, order schema.OrderReques
 	return orderResponse, nil
 }
 
-func (s *OrderService) ConfirmOrder(ctx context.Context, orderConfirmRequest schema.OrderConfirmRequest) error {
+func (s *orderService) ConfirmOrder(ctx context.Context, orderConfirmRequest schema.OrderConfirmRequest) error {
 	orderID := strconv.Itoa(int(orderConfirmRequest.OrderID))
 	err := s.redisClient.TryAcquireLock(ctx, orderID, _lockTimeOut)
 	if err != nil {
@@ -128,7 +128,7 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 	return nil
 }
 
-func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo schema.OrderUpdateRequest) error {
+func (s *orderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo schema.OrderUpdateRequest) error {
 	orderID := strconv.Itoa(int(orderUpdateInfo.OrderID))
 	err := s.redisClient.TryAcquireLock(ctx, orderID, _lockTimeOut)
 	if err != nil {
@@ -165,7 +165,7 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo sc
 	return nil
 }
 
-func (s *OrderService) getCachedOrder(ctx context.Context, cacheKey string) (*schema.OrderResponse, error) {
+func (s *orderService) getCachedOrder(ctx context.Context, cacheKey string) (*schema.OrderResponse, error) {
 
 	order, err := s.redisClient.Get(ctx, cacheKey)
 	if err != nil {
@@ -181,7 +181,7 @@ func (s *OrderService) getCachedOrder(ctx context.Context, cacheKey string) (*sc
 	return orderResponse, nil
 }
 
-func (s *OrderService) updateCacheOrderStaus(ctx context.Context, cacheKey string, orderResponse *schema.OrderResponse) error {
+func (s *orderService) updateCacheOrderStaus(ctx context.Context, cacheKey string, orderResponse *schema.OrderResponse) error {
 	orderResponseJSON, err := json.Marshal(orderResponse)
 
 	if err != nil {

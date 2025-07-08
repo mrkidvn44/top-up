@@ -22,38 +22,38 @@ type Interface interface {
 	TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error
 }
 
-type RedisClient struct {
+type redisClient struct {
 	Client *redis.Client
 }
 
-var _ Interface = (*RedisClient)(nil)
+var _ Interface = (*redisClient)(nil)
 
-func NewRedis(cfg config.Redis) *RedisClient {
-	return &RedisClient{Client: redis.NewClient(&redis.Options{
+func NewRedis(cfg config.Redis) *redisClient {
+	return &redisClient{Client: redis.NewClient(&redis.Options{
 		Addr:     cfg.Addr,
 		Password: cfg.Password,
 		DB:       cfg.DB,
 	})}
 }
 
-func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
+func (r *redisClient) Get(ctx context.Context, key string) (string, error) {
 	return r.Client.Get(ctx, key).Result()
 }
 
-func (r *RedisClient) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
+func (r *redisClient) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
 	return r.Client.Set(ctx, key, value, expiration).Err()
 }
 
-func (r *RedisClient) Del(ctx context.Context, key string) error {
+func (r *redisClient) Del(ctx context.Context, key string) error {
 	return r.Client.Del(ctx, key).Err()
 }
 
-func (r *RedisClient) getLock(ctx context.Context, encodeKey string) (bool, error) {
+func (r *redisClient) getLock(ctx context.Context, encodeKey string) (bool, error) {
 	wasSet, err := r.Client.SetNX(ctx, encodeKey, 1, _timeOut).Result()
 	return wasSet, err
 }
 
-func (r *RedisClient) ReleaseLock(ctx context.Context, key string) error {
+func (r *redisClient) ReleaseLock(ctx context.Context, key string) error {
 	encodeKey := getEncodeKey(key)
 	releaseChannel := getReleashKey(encodeKey)
 	err := r.Client.Del(ctx, encodeKey).Err()
@@ -64,7 +64,7 @@ func (r *RedisClient) ReleaseLock(ctx context.Context, key string) error {
 	return r.Client.Publish(ctx, releaseChannel, "released").Err()
 }
 
-func (r *RedisClient) TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error {
+func (r *redisClient) TryAcquireLock(ctx context.Context, key string, timeout time.Duration) error {
 	expireTime := time.Now().Add(timeout)
 	encodeKey := getEncodeKey(key)
 	releaseChannel := getReleashKey(encodeKey)

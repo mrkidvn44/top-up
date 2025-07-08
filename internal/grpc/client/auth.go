@@ -8,19 +8,19 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type IAuthGRPCClient interface {
+type AuthGRPCClient interface {
 	Close()
 	AuthenticateService(ctx context.Context, req *authpb.AuthenticateServiceRequest) error
 }
 
-type AuthGRPCClient struct {
+type authGRPCClient struct {
 	conn            *grpc.ClientConn
 	GrpcAuthService authpb.AuthServiceClient
 }
 
-var _ IAuthGRPCClient = (*AuthGRPCClient)(nil)
+var _ AuthGRPCClient = (*authGRPCClient)(nil)
 
-func NewAuthGRPCClient(grcpServerUrl string) (*AuthGRPCClient, error) {
+func NewAuthGRPCClient(grcpServerUrl string) (*authGRPCClient, error) {
 	// gRPC Client
 	conn, err := grpc.NewClient(grcpServerUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -29,18 +29,18 @@ func NewAuthGRPCClient(grcpServerUrl string) (*AuthGRPCClient, error) {
 	}
 
 	grpcAuthService := authpb.NewAuthServiceClient(conn)
-	
-	return &AuthGRPCClient{
+
+	return &authGRPCClient{
 		conn:            conn,
 		GrpcAuthService: grpcAuthService,
 	}, nil
 }
 
-func (a *AuthGRPCClient) Close() {
+func (a *authGRPCClient) Close() {
 	a.conn.Close()
 }
 
-func (a *AuthGRPCClient) AuthenticateService(ctx context.Context, req *authpb.AuthenticateServiceRequest) error {
+func (a *authGRPCClient) AuthenticateService(ctx context.Context, req *authpb.AuthenticateServiceRequest) error {
 	_, err := a.GrpcAuthService.AuthenticateService(ctx, req)
 	return err
 }

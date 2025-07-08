@@ -12,12 +12,12 @@ import (
 )
 
 type PurchaseHistoryRouter struct {
-	service service.IPurchaseHistoryService
+	service service.PurchaseHistoryService
 	logger  logger.Interface
-	auth    grpcClient.IAuthGRPCClient
+	auth    grpcClient.AuthGRPCClient
 }
 
-func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.IPurchaseHistoryService, a grpcClient.IAuthGRPCClient, l logger.Interface) {
+func NewPurchaseHistoryRouter(handler *gin.RouterGroup, s service.PurchaseHistoryService, a grpcClient.AuthGRPCClient, l logger.Interface) {
 	h := &PurchaseHistoryRouter{service: s, logger: l, auth: a}
 	handler.GET("/purchase-history/:user_id", h.GetPurchaseHistory)
 }

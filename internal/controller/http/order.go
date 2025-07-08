@@ -16,13 +16,13 @@ import (
 )
 
 type OrderRouter struct {
-	service   service.IOrderService
-	auth      grpcClient.IAuthGRPCClient
+	service   service.OrderService
+	auth      grpcClient.AuthGRPCClient
 	logger    logger.Interface
 	validator validator.Interface
 }
 
-func NewOrderRouter(handler *gin.RouterGroup, s service.IOrderService, a grpcClient.IAuthGRPCClient, l logger.Interface, v validator.Interface) {
+func NewOrderRouter(handler *gin.RouterGroup, s service.OrderService, a grpcClient.AuthGRPCClient, l logger.Interface, v validator.Interface) {
 	h := &OrderRouter{service: s, auth: a, logger: l, validator: v}
 	orderRoutes := handler.Group("/order")
 	{

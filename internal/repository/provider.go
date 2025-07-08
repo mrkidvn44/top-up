@@ -7,20 +7,20 @@ import (
 	"gorm.io/gorm"
 )
 
-type IProviderRepository interface {
+type ProviderRepository interface {
 	GetProviders(ctx context.Context) (*[]model.Provider, error)
 }
-type ProviderRepository struct {
+type providerRepository struct {
 	db *gorm.DB
 }
 
-var _ IProviderRepository = (*ProviderRepository)(nil)
+var _ ProviderRepository = (*providerRepository)(nil)
 
-func NewProviderRepository(db *gorm.DB) *ProviderRepository {
-	return &ProviderRepository{db: db}
+func NewProviderRepository(db *gorm.DB) *providerRepository {
+	return &providerRepository{db: db}
 }
 
-func (r *ProviderRepository) GetProviders(ctx context.Context) (*[]model.Provider, error) {
+func (r *providerRepository) GetProviders(ctx context.Context) (*[]model.Provider, error) {
 	var providers []model.Provider
 	if err := r.db.WithContext(ctx).Find(&providers).Error; err != nil {
 		return nil, err

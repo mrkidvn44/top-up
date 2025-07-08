@@ -21,18 +21,18 @@ type Producer interface {
 	Close() error
 }
 
-type KafkaConsumer struct {
+type kafkaConsumer struct {
 	consumer *kafka.Consumer
 }
 
-type KafkaProducer struct {
+type kafkaProducer struct {
 	producer *kafka.Producer
 }
 
-var _ Consumer = (*KafkaConsumer)(nil)
-var _ Producer = (*KafkaProducer)(nil)
+var _ Consumer = (*kafkaConsumer)(nil)
+var _ Producer = (*kafkaProducer)(nil)
 
-func NewKafkaConsumer(brokers string, groupID string) (*KafkaConsumer, error) {
+func NewKafkaConsumer(brokers string, groupID string) (*kafkaConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": brokers,
 		"group.id":          groupID,
@@ -42,19 +42,19 @@ func NewKafkaConsumer(brokers string, groupID string) (*KafkaConsumer, error) {
 		return nil, err
 	}
 
-	return &KafkaConsumer{consumer: consumer}, nil
+	return &kafkaConsumer{consumer: consumer}, nil
 }
 
-func NewKafkaProducer(brokers string) (*KafkaProducer, error) {
+func NewKafkaProducer(brokers string) (*kafkaProducer, error) {
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": brokers})
 	if err != nil {
 		return nil, err
 	}
 
-	return &KafkaProducer{producer: producer}, nil
+	return &kafkaProducer{producer: producer}, nil
 }
 
-func (k *KafkaConsumer) Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error, errHandler func(err error)) error {
+func (k *kafkaConsumer) Consume(ctx context.Context, topic string, groupID string, handler func(msg *kafka.Message) error, errHandler func(err error)) error {
 	if err := k.consumer.SubscribeTopics([]string{topic}, nil); err != nil {
 		return err
 	}
@@ -88,14 +88,14 @@ func (k *KafkaConsumer) Consume(ctx context.Context, topic string, groupID strin
 	}
 }
 
-func (k *KafkaConsumer) Close() error {
+func (k *kafkaConsumer) Close() error {
 	if k.consumer != nil {
 		return k.consumer.Close()
 	}
 	return nil
 }
 
-func (k *KafkaProducer) Produce(ctx context.Context, topic string, key string, value interface{}) error {
+func (k *kafkaProducer) Produce(ctx context.Context, topic string, key string, value interface{}) error {
 	message := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Key:            []byte(key),
@@ -119,7 +119,7 @@ func (k *KafkaProducer) Produce(ctx context.Context, topic string, key string, v
 	return nil
 }
 
-func (k *KafkaProducer) Close() error {
+func (k *kafkaProducer) Close() error {
 	if k.producer != nil {
 		k.producer.Flush(15 * 1000) // Wait for all messages to be delivered
 		k.producer.Close()

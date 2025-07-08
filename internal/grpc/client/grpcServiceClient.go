@@ -3,7 +3,7 @@ package grpc
 import "top-up-api/config"
 
 type GRPCServiceClient struct {
-	AuthGRPCClient IAuthGRPCClient
+	AuthGRPCClient AuthGRPCClient
 }
 
 func NewGRPCServiceClient(

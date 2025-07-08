@@ -12,11 +12,11 @@ import (
 )
 
 type SkuRouter struct {
-	service service.ISkuService
+	service service.SkuService
 	logger  logger.Interface
 }
 
-func NewSkuRouter(handler *gin.RouterGroup, s service.ISkuService, l logger.Interface) {
+func NewSkuRouter(handler *gin.RouterGroup, s service.SkuService, l logger.Interface) {
 	h := &SkuRouter{service: s, logger: l}
 	skuRoutes := handler.Group("/sku")
 	{

@@ -7,10 +7,11 @@ option go_package = "proto/order;orderpb";
 
 service OrderService{
     rpc ConfirmOrder (OrderConfirmRequest) returns (ConfirmOrderResponse);
+    rpc UpdateOrderStatus (OrderUpdateRequest) returns (OrderUpdateResponse);
 }
 
 message OrderConfirmRequest{
-    uint64 order_id = 1;
+    uint64 order_id = 1; 
     uint64 user_id  = 2;
     uint64 sku_id = 3;
     int64 total_price = 4;
@@ -20,6 +21,17 @@ message OrderConfirmRequest{
 }
 
 message ConfirmOrderResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message OrderUpdateRequest{
+    uint64 order_id = 1;
+    string status = 2;
+    string phone_number = 3;
+}
+
+message OrderUpdateResponse {
     bool success = 1;
     string error = 2;
 }

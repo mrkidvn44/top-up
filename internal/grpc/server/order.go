@@ -22,11 +22,29 @@ func (s *OrderGRPCServer) ConfirmOrder(ctx context.Context, req *pb.OrderConfirm
 	orderConfirmRequest := mapper.OrderConfirmRequestFromProto(req)
 	err := s.orderService.ConfirmOrder(ctx, *orderConfirmRequest)
 	if err != nil {
-		return nil, err
+		return &pb.ConfirmOrderResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, err
 	}
 	return &pb.ConfirmOrderResponse{
 		Success: true,
 		Error:   "",
 	}, nil
 
+}
+
+func (s *OrderGRPCServer) UpdateOrderStatus(ctx context.Context, req *pb.OrderUpdateRequest) (*pb.OrderUpdateResponse, error){
+	orderUpdateRequest := mapper.OrderUpdateRequestFromProto(req)
+	err := s.orderService.UpdateOrderStatus(ctx, *orderUpdateRequest)
+	if err != nil {
+		return &pb.OrderUpdateResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, err
+	}
+	return &pb.OrderUpdateResponse{
+		Success: true,
+		Error:   "",
+	}, nil
 }

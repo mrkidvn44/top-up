@@ -42,3 +42,11 @@ func OrderConfirmRequestFromProto(order *pb.OrderConfirmRequest) *schema.OrderCo
 		CashBackValue: int(order.CashBackValue),
 	}
 }
+
+func OrderUpdateRequestFromProto(order *pb.OrderUpdateRequest) *schema.OrderUpdateRequest {
+	return &schema.OrderUpdateRequest{
+		OrderID:     uint(order.OrderId),
+		Status:      model.PurchaseHistoryStatus(order.Status),
+		PhoneNumber: order.PhoneNumber,
+	}
+}

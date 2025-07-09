@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: proto/order.proto
+// source: order.proto
 
 package orderpb
 
@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrderService_ConfirmOrder_FullMethodName = "/order.OrderService/ConfirmOrder"
+	OrderService_ConfirmOrder_FullMethodName      = "/order.OrderService/ConfirmOrder"
+	OrderService_UpdateOrderStatus_FullMethodName = "/order.OrderService/UpdateOrderStatus"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrderServiceClient interface {
 	ConfirmOrder(ctx context.Context, in *OrderConfirmRequest, opts ...grpc.CallOption) (*ConfirmOrderResponse, error)
+	UpdateOrderStatus(ctx context.Context, in *OrderUpdateRequest, opts ...grpc.CallOption) (*OrderUpdateResponse, error)
 }
 
 type orderServiceClient struct {
@@ -47,11 +49,22 @@ func (c *orderServiceClient) ConfirmOrder(ctx context.Context, in *OrderConfirmR
 	return out, nil
 }
 
+func (c *orderServiceClient) UpdateOrderStatus(ctx context.Context, in *OrderUpdateRequest, opts ...grpc.CallOption) (*OrderUpdateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OrderUpdateResponse)
+	err := c.cc.Invoke(ctx, OrderService_UpdateOrderStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServiceServer is the server API for OrderService service.
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
 type OrderServiceServer interface {
 	ConfirmOrder(context.Context, *OrderConfirmRequest) (*ConfirmOrderResponse, error)
+	UpdateOrderStatus(context.Context, *OrderUpdateRequest) (*OrderUpdateResponse, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedOrderServiceServer struct{}
 
 func (UnimplementedOrderServiceServer) ConfirmOrder(context.Context, *OrderConfirmRequest) (*ConfirmOrderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ConfirmOrder not implemented")
+}
+func (UnimplementedOrderServiceServer) UpdateOrderStatus(context.Context, *OrderUpdateRequest) (*OrderUpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateOrderStatus not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -104,6 +120,24 @@ func _OrderService_ConfirmOrder_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderService_UpdateOrderStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OrderUpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).UpdateOrderStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_UpdateOrderStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).UpdateOrderStatus(ctx, req.(*OrderUpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrderService_ServiceDesc is the grpc.ServiceDesc for OrderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -115,7 +149,11 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ConfirmOrder",
 			Handler:    _OrderService_ConfirmOrder_Handler,
 		},
+		{
+			MethodName: "UpdateOrderStatus",
+			Handler:    _OrderService_UpdateOrderStatus_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/order.proto",
+	Metadata: "order.proto",
 }

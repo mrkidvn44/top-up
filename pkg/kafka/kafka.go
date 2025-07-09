@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -63,8 +64,6 @@ func (k *kafkaConsumer) Consume(ctx context.Context, topic string, groupID strin
 
 	msgCh := make(chan *kafka.Message)
 	defer close(msgCh)
-	defer k.wg.Wait()
-
 	for range _workerCount {
 		k.wg.Add(1)
 		go worker(msgCh, handler, errHandler, &k.wg)
@@ -75,21 +74,21 @@ func (k *kafkaConsumer) Consume(ctx context.Context, topic string, groupID strin
 			return ctx.Err()
 		}
 
-		msg, err := k.consumer.ReadMessage(-1)
-		if err != nil {
-			if errHandler != nil {
-				errHandler(err)
-				continue
-			}
-			return err
+		msg, err := k.consumer.ReadMessage(500 * time.Millisecond)
+		if err != nil && errHandler != nil && !err.(kafka.Error).IsTimeout() {
+			errHandler(err)
+			continue
 		}
-
+		if msg == nil {
+			continue
+		}
 		select {
 		case msgCh <- msg:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
+
 }
 
 func (k *kafkaConsumer) Close() error {

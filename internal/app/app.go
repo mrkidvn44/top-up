@@ -67,8 +67,8 @@ func Run(cfg *config.Config) {
 
 	// Kafka consumers
 	consumers := consumer.NewConsumers(&cfg.Kafka, services)
-	ctx, kafkaContextCancel := context.WithCancel(context.Background())
-	consumers.StartKafkaConsumers(ctx)
+	kafkaCtx, kafkaContextCancel := context.WithCancel(context.Background())
+	consumers.StartKafkaConsumers(kafkaCtx)
 
 	// HTTP Server
 	handler := gin.Default()

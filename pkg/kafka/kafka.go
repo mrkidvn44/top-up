@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -23,6 +24,7 @@ type Producer interface {
 
 type kafkaConsumer struct {
 	consumer *kafka.Consumer
+	wg       sync.WaitGroup
 }
 
 type kafkaProducer struct {
@@ -42,7 +44,7 @@ func NewKafkaConsumer(brokers string, groupID string) (*kafkaConsumer, error) {
 		return nil, err
 	}
 
-	return &kafkaConsumer{consumer: consumer}, nil
+	return &kafkaConsumer{consumer: consumer, wg: sync.WaitGroup{}}, nil
 }
 
 func NewKafkaProducer(brokers string) (*kafkaProducer, error) {
@@ -61,9 +63,11 @@ func (k *kafkaConsumer) Consume(ctx context.Context, topic string, groupID strin
 
 	msgCh := make(chan *kafka.Message)
 	defer close(msgCh)
+	defer k.wg.Wait()
 
 	for range _workerCount {
-		go worker(msgCh, handler, errHandler)
+		k.wg.Add(1)
+		go worker(msgCh, handler, errHandler, &k.wg)
 	}
 
 	for {
@@ -90,6 +94,7 @@ func (k *kafkaConsumer) Consume(ctx context.Context, topic string, groupID strin
 
 func (k *kafkaConsumer) Close() error {
 	if k.consumer != nil {
+		k.wg.Wait()
 		return k.consumer.Close()
 	}
 	return nil
@@ -127,8 +132,9 @@ func (k *kafkaProducer) Close() error {
 	return nil
 }
 
-func worker(msgCh <-chan *kafka.Message, handler func(msg *kafka.Message) error, errHandler func(err error)) {
+func worker(msgCh <-chan *kafka.Message, handler func(msg *kafka.Message) error, errHandler func(err error), wg *sync.WaitGroup) {
 	defer handlePanic(errHandler)
+	defer wg.Done()
 
 	for msg := range msgCh {
 		if err := handler(msg); err != nil && errHandler != nil {

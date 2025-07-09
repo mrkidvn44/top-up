@@ -2,6 +2,7 @@ package service
 
 import (
 	"top-up-api/config"
+	grpcClient "top-up-api/internal/grpc/client"
 	"top-up-api/internal/repository"
 	"top-up-api/pkg/logger"
 	"top-up-api/pkg/redis"
@@ -33,6 +34,7 @@ func NewContainer(
 	redis redis.Interface,
 	validator validator.Interface,
 	config *config.Config,
+	grpcClients grpcClient.GRPCServiceClient,
 ) *Container {
 
 	// Initialize repositories
@@ -44,7 +46,7 @@ func NewContainer(
 	providerService := NewProviderService(providerRepository)
 	skuService := NewSkuService(skuRepository)
 	purchaseHistoryService := NewPurchaseHistoryService(purchaseHistoryRepository)
-	orderService := NewOrderService(skuRepository, purchaseHistoryRepository, redis)
+	orderService := NewOrderService(skuRepository, purchaseHistoryRepository, redis, grpcClients.ProviderGRPCClient)
 
 	return &Container{
 		// Core dependencies

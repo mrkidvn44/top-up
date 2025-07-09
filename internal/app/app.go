@@ -52,7 +52,7 @@ func Run(cfg *config.Config) {
 	logger.Info(fmt.Sprintf("redis connected to %s", redis))
 
 	// Services
-	services := service.NewContainer(db.Database, logger, redis, validator, cfg)
+	services := service.NewContainer(db.Database, logger, redis, validator, cfg, *grpcClients)
 
 	// Create gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.Grpc.Port)
@@ -67,8 +67,7 @@ func Run(cfg *config.Config) {
 
 	// Kafka consumers
 	consumers := consumer.NewConsumers(&cfg.Kafka, services)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, kafkaContextCancel := context.WithCancel(context.Background())
 	consumers.StartKafkaConsumers(ctx)
 
 	// HTTP Server
@@ -104,6 +103,7 @@ func Run(cfg *config.Config) {
 	}
 
 	// Kafka service
+	kafkaContextCancel()
 	err = consumers.CloseKafkaConsumers()
 	if err != nil {
 		logger.Error(fmt.Errorf("app - Run - services.CloseKafka: %w", err))

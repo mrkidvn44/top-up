@@ -3,7 +3,8 @@ package grpc
 import "top-up-api/config"
 
 type GRPCServiceClient struct {
-	AuthGRPCClient AuthGRPCClient
+	AuthGRPCClient     AuthGRPCClient
+	ProviderGRPCClient ProviderGRPCClient
 }
 
 func NewGRPCServiceClient(
@@ -13,12 +14,18 @@ func NewGRPCServiceClient(
 	if err != nil {
 		return nil, err
 	}
-	
+
+	providerGRPCClient, err := NewProviderGRPCClient(config.Provider)
+	if err != nil {
+		return nil, err
+	}
 	return &GRPCServiceClient{
-		AuthGRPCClient: authGRPCClient,
+		AuthGRPCClient:     authGRPCClient,
+		ProviderGRPCClient: providerGRPCClient,
 	}, nil
 }
 
 func (s *GRPCServiceClient) CloseConnection() {
 	s.AuthGRPCClient.Close()
+	s.ProviderGRPCClient.Close()
 }

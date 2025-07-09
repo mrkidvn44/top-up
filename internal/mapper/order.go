@@ -4,6 +4,7 @@ import (
 	"top-up-api/internal/model"
 	"top-up-api/internal/schema"
 	pb "top-up-api/proto/order"
+	providerpb "top-up-api/proto/provider"
 )
 
 func OrderResponseFromOrderRequest(orderRequest schema.OrderRequest, sku *model.Sku, orderID uint) *schema.OrderResponse {
@@ -48,5 +49,16 @@ func OrderUpdateRequestFromProto(order *pb.OrderUpdateRequest) *schema.OrderUpda
 		OrderID:     uint(order.OrderId),
 		Status:      model.PurchaseHistoryStatus(order.Status),
 		PhoneNumber: order.PhoneNumber,
+	}
+}
+
+func OrderProcessRequestFromOrder(order *schema.OrderResponse, callbackUrl string) *providerpb.OrderProcessRequest {
+	req := OrderProviderRequestFromOrderResponse(order, callbackUrl)
+	return &providerpb.OrderProcessRequest{
+		OrderId:     uint64(req.OrderID),
+		PhoneNumber: req.PhoneNumber,
+		TotalPrice:  int64(req.TotalPrice),
+		Price:       int64(req.Price),
+		CallBackUrl: req.CallBackUrl,
 	}
 }

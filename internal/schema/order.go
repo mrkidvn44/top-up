@@ -22,13 +22,14 @@ type OrderRequest struct {
 }
 
 type OrderResponse struct {
-	OrderID       uint                        `json:"order_id"`
-	UserID        uint                        `json:"user_id"`
-	Sku           SkuResponse                 `json:"sku"`
-	TotalPrice    int                         `json:"total_price"`
-	Status        model.PurchaseHistoryStatus `json:"status"`
-	PhoneNumber   string                      `json:"phone_number"`
-	CashBackValue int                         `json:"cash_back_value"`
+	OrderID              uint                        `json:"order_id"`
+	UserID               uint                        `json:"user_id"`
+	Sku                  SkuResponse                 `json:"sku"`
+	TotalPrice           int                         `json:"total_price"`
+	Status               model.PurchaseHistoryStatus `json:"status"`
+	PhoneNumber          string                      `json:"phone_number"`
+	CashBackValue        int                         `json:"cash_back_value"`
+	RandomProviderWeight int                         `json:"rand_provider_weight"`
 }
 
 type OrderProviderRequest struct {

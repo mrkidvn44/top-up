@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"time"
 
+	pb "top-up-api/internal/grpc/client"
 	"top-up-api/internal/mapper"
 	"top-up-api/internal/model"
 	"top-up-api/internal/repository"
@@ -20,13 +22,16 @@ import (
 )
 
 const (
-	_lockTimeOut      = 5 * time.Minute
-	_cacheTime        = 30 * time.Minute
-	_cacheKey         = "order_id"
-	_paymentCreateURL = "http://localhost:8081/v1/api/order/create"
-	_paymentUpdateURL = "http://localhost:8081/v1/api/order/update"
-	_providerURL      = "http://localhost:8082/v1/api/order/"
-	_callbackURL      = "http://localhost:8080/v1/api/order/update-status"
+	_lockTimeOut          = 5 * time.Minute
+	_cacheTime            = 30 * time.Minute
+	_cacheKey             = "order_id"
+	_paymentCreateURL     = "http://localhost:8081/v1/api/order/create"
+	_paymentUpdateURL     = "http://localhost:8081/v1/api/order/update"
+	_providerURL          = "http://localhost:8082/v1/api/order/"
+	_callbackURL          = "http://localhost:8080/v1/api/order/update-status"
+	_totalWeight          = 10
+	_httpCumulativeWeight = 3
+	_grpcCumulativeWeight = 10
 )
 
 type OrderService interface {
@@ -39,6 +44,7 @@ type orderService struct {
 	skuRepo             repository.SkuRepository
 	purchaseHistoryRepo repository.PurchaseHistoryRepository
 	redisClient         redis.Interface
+	providerGRPCClient  pb.ProviderGRPCClient
 }
 
 var _ OrderService = (*orderService)(nil)
@@ -47,11 +53,13 @@ func NewOrderService(
 	skuRepo repository.SkuRepository,
 	purchaseHistoryRepo repository.PurchaseHistoryRepository,
 	redisClient redis.Interface,
+	providerGRPCClient pb.ProviderGRPCClient,
 ) *orderService {
 	return &orderService{
 		skuRepo:             skuRepo,
 		purchaseHistoryRepo: purchaseHistoryRepo,
 		redisClient:         redisClient,
+		providerGRPCClient:  providerGRPCClient,
 	}
 }
 
@@ -66,6 +74,7 @@ func (s *orderService) CreateOrder(ctx context.Context, order schema.OrderReques
 
 	orderID := util.GenerateOrderID()
 	orderResponse := mapper.OrderResponseFromOrderRequest(order, sku, orderID)
+	orderResponse.RandomProviderWeight = getRandomWeight()
 
 	orderResponseJSON, err := json.Marshal(orderResponse)
 	if err != nil {
@@ -122,7 +131,11 @@ func (s *orderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 	}
 
 	if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
-		go sendOrderResponse(_providerURL, orderResponse)
+		if orderResponse.RandomProviderWeight <= _httpCumulativeWeight {
+			go sendOrderResponse(_providerURL, orderResponse)
+		} else {
+			go s.providerGRPCClient.ProcessOrder(ctx, mapper.OrderProcessRequestFromOrder(orderResponse, _callbackURL))
+		}
 	}
 
 	return nil
@@ -228,4 +241,8 @@ func sendFailedOrder(url string, orderUpdateInfo schema.OrderUpdateRequest) {
 
 func getCachKey(orderID string) string {
 	return _cacheKey + orderID
+}
+
+func getRandomWeight() int {
+	return rand.IntN(_totalWeight)
 }

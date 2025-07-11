@@ -15,52 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/card-detail": {
-            "get": {
-                "description": "Get card details grouped by provider",
-                "tags": [
-                    "card-detail"
-                ],
-                "summary": "Get card details grouped by provider",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/top-up-api_internal_schema.SkusGroupByProvider"
-                        }
-                    }
-                }
-            }
-        },
-        "/card-detail/{providerCode}": {
-            "get": {
-                "description": "Get card details by provider code",
-                "tags": [
-                    "card-detail"
-                ],
-                "summary": "Get card details by provider code",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Provider code",
-                        "name": "providerCode",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/top-up-api_internal_schema.SkuResponse"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/order/confirm": {
             "post": {
                 "description": "Confirm order",
@@ -167,32 +121,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/provider": {
-            "get": {
-                "description": "Get providers",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "provider"
-                ],
-                "summary": "Get providers",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/top-up-api_internal_schema.ProviderResponse"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/purchase-history/{user_id}": {
             "get": {
                 "security": [
@@ -242,97 +170,35 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/create": {
-            "post": {
-                "description": "Create user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
+        "/sku": {
+            "get": {
+                "description": "Get card details grouped by supplier",
                 "tags": [
-                    "user"
+                    "sku"
                 ],
-                "summary": "Create user",
-                "parameters": [
-                    {
-                        "description": "User create details",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/top-up-api_internal_schema.UserCreateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "User created successfully",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/login": {
-            "post": {
-                "description": "Login",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "user"
-                ],
-                "summary": "Login",
-                "parameters": [
-                    {
-                        "description": "User login request",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/top-up-api_internal_schema.UserLoginRequest"
-                        }
-                    }
-                ],
+                "summary": "Get card details grouped by supplier",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/top-up-api_internal_schema.Response"
+                            "$ref": "#/definitions/top-up-api_internal_schema.SkusGroupBySupplier"
                         }
                     }
                 }
             }
         },
-        "/user/{id}": {
+        "/sku/{supplierCode}": {
             "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Get user by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
+                "description": "Get sku details by supplier code",
                 "tags": [
-                    "user"
+                    "sku"
                 ],
-                "summary": "Get user by ID",
+                "summary": "Get sku details by supplier code",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
+                        "type": "string",
+                        "description": "Supplier code",
+                        "name": "supplierCode",
                         "in": "path",
                         "required": true
                     }
@@ -341,13 +207,36 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/top-up-api_internal_schema.UserProfileResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/top-up-api_internal_schema.SkuResponse"
+                            }
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
+                    }
+                }
+            }
+        },
+        "/supplier": {
+            "get": {
+                "description": "Get supplier",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplier"
+                ],
+                "summary": "Get supplier",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/gin.H"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/top-up-api_internal_schema.SupplierResponse"
+                            }
                         }
                     }
                 }
@@ -355,10 +244,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "gin.H": {
-            "type": "object",
-            "additionalProperties": {}
-        },
         "top-up-api_internal_model.PurchaseHistoryStatus": {
             "type": "string",
             "enum": [
@@ -372,6 +257,17 @@ const docTemplate = `{
                 "PurchaseHistoryStatusConfirm",
                 "PurchaseHistoryStatusSuccess",
                 "PurchaseHistoryStatusFailed"
+            ]
+        },
+        "top-up-api_internal_model.SupplierStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "inactive"
+            ],
+            "x-enum-varnames": [
+                "SupplierStatusActive",
+                "SupplierStatusInactive"
             ]
         },
         "top-up-api_internal_schema.OrderConfirmRequest": {
@@ -425,6 +321,9 @@ const docTemplate = `{
                 },
                 "phone_number": {
                     "type": "string"
+                },
+                "rand_provider_weight": {
+                    "type": "integer"
                 },
                 "sku": {
                     "$ref": "#/definitions/top-up-api_internal_schema.SkuResponse"
@@ -486,34 +385,6 @@ const docTemplate = `{
                 }
             }
         },
-        "top-up-api_internal_schema.ProviderInfo": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "top-up-api_internal_schema.ProviderResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "logo": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
         "top-up-api_internal_schema.Response": {
             "type": "object",
             "properties": {
@@ -532,13 +403,13 @@ const docTemplate = `{
         "top-up-api_internal_schema.SkuMiniatureResponse": {
             "type": "object",
             "properties": {
+                "cashback": {},
                 "id": {
                     "type": "integer"
                 },
                 "price": {
                     "type": "integer"
-                },
-                "provider": {}
+                }
             }
         },
         "top-up-api_internal_schema.SkuResponse": {
@@ -551,99 +422,56 @@ const docTemplate = `{
                 "price": {
                     "type": "integer"
                 },
-                "provider": {
-                    "$ref": "#/definitions/top-up-api_internal_schema.ProviderInfo"
+                "supplier": {
+                    "$ref": "#/definitions/top-up-api_internal_schema.SupplierInfo"
                 }
             }
         },
-        "top-up-api_internal_schema.SkusGroupByProvider": {
+        "top-up-api_internal_schema.SkusGroupBySupplier": {
             "type": "object",
             "properties": {
-                "provider_code": {
-                    "type": "string"
-                },
-                "provider_logo_url": {
-                    "type": "string"
-                },
-                "provider_name": {
-                    "type": "string"
-                },
                 "sku": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/top-up-api_internal_schema.SkuMiniatureResponse"
                     }
+                },
+                "supplier_code": {
+                    "type": "string"
+                },
+                "supplier_logo_url": {
+                    "type": "string"
+                },
+                "supplier_name": {
+                    "type": "string"
                 }
             }
         },
-        "top-up-api_internal_schema.UserCreateRequest": {
+        "top-up-api_internal_schema.SupplierInfo": {
             "type": "object",
-            "required": [
-                "first_name",
-                "last_name",
-                "password",
-                "phone_number"
-            ],
             "properties": {
-                "first_name": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 2
+                "code": {
+                    "type": "string"
                 },
-                "last_name": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 2
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 8
-                },
-                "phone_number": {
-                    "type": "string",
-                    "maxLength": 10,
-                    "minLength": 10
+                "name": {
+                    "type": "string"
                 }
             }
         },
-        "top-up-api_internal_schema.UserLoginRequest": {
-            "type": "object",
-            "required": [
-                "password",
-                "phone_number"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "minLength": 8
-                },
-                "phone_number": {
-                    "type": "string",
-                    "maxLength": 10,
-                    "minLength": 10
-                }
-            }
-        },
-        "top-up-api_internal_schema.UserProfileResponse": {
+        "top-up-api_internal_schema.SupplierResponse": {
             "type": "object",
             "properties": {
-                "balance": {
-                    "type": "integer"
-                },
-                "cash_back": {
-                    "type": "integer"
-                },
-                "first_name": {
+                "code": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "integer"
-                },
-                "last_name": {
+                "logo": {
                     "type": "string"
                 },
-                "phone_number": {
+                "name": {
                     "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/top-up-api_internal_model.SupplierStatus"
                 }
             }
         }

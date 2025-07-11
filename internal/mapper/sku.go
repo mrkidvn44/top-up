@@ -10,39 +10,39 @@ func SkuResponseFromModel(sku model.Sku) *schema.SkuResponse {
 		ID:                sku.ID,
 		Price:             sku.Price,
 		CashBackInterface: CashBackFromModel(sku.CashBack),
-		ProviderInfo: schema.ProviderInfo{
-			Code: sku.Provider.Code,
-			Name: sku.Provider.Name,
+		SupplierInfo: schema.SupplierInfo{
+			Code: sku.Supplier.Code,
+			Name: sku.Supplier.Name,
 		},
 	}
 }
 
-func SkusGroupByProviderFromModel(skus []model.Sku) *[]schema.SkusGroupByProvider {
+func SkusGroupBySupplierFromModel(skus []model.Sku) *[]schema.SkusGroupBySupplier {
 	if len(skus) == 0 {
 		return nil
 	}
 
-	groupedDetails := make(map[string]schema.SkusGroupByProvider)
+	groupedDetails := make(map[string]schema.SkusGroupBySupplier)
 	for _, sku := range skus {
-		providerCode := sku.Provider.Code
-		if _, exists := groupedDetails[providerCode]; !exists {
-			groupedDetails[providerCode] = schema.SkusGroupByProvider{
-				ProviderCode:    providerCode,
-				ProviderName:    sku.Provider.Name,
-				ProviderLogoUrl: sku.Provider.LogoUrl,
+		supplierCode := sku.Supplier.Code
+		if _, exists := groupedDetails[supplierCode]; !exists {
+			groupedDetails[supplierCode] = schema.SkusGroupBySupplier{
+				SupplierCode:    supplierCode,
+				SupplierName:    sku.Supplier.Name,
+				SupplierLogoUrl: sku.Supplier.LogoUrl,
 				Skus:            []schema.SkuMiniatureResponse{},
 			}
 		}
-		entry := groupedDetails[providerCode]
+		entry := groupedDetails[supplierCode]
 		entry.Skus = append(entry.Skus, schema.SkuMiniatureResponse{
 			ID:                sku.ID,
 			Price:             sku.Price,
 			CashBackInterface: CashBackFromModel(sku.CashBack),
 		})
-		groupedDetails[providerCode] = entry
+		groupedDetails[supplierCode] = entry
 	}
 
-	var result []schema.SkusGroupByProvider
+	var result []schema.SkusGroupBySupplier
 	for _, group := range groupedDetails {
 		result = append(result, group)
 	}

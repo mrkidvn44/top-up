@@ -21,7 +21,7 @@ type Container struct {
 	Validator validator.Interface
 
 	// Services
-	ProviderService        ProviderService
+	SupplierService        SupplierService
 	SkuService             SkuService
 	PurchaseHistoryService PurchaseHistoryService
 	OrderService           OrderService
@@ -38,12 +38,12 @@ func NewContainer(
 ) *Container {
 
 	// Initialize repositories
-	providerRepository := repository.NewProviderRepository(database)
+	supplierRepository := repository.NewSupplierRepository(database)
 	skuRepository := repository.NewSkuRepository(database)
 	purchaseHistoryRepository := repository.NewPurchaseHistoryRepository(database)
 
 	// Initialize services
-	providerService := NewProviderService(providerRepository)
+	supplierService := NewSupplierService(supplierRepository)
 	skuService := NewSkuService(skuRepository)
 	purchaseHistoryService := NewPurchaseHistoryService(purchaseHistoryRepository)
 	orderService := NewOrderService(skuRepository, purchaseHistoryRepository, redis, grpcClients.ProviderGRPCClient)
@@ -56,7 +56,7 @@ func NewContainer(
 		Validator: validator,
 
 		// Services
-		ProviderService:        providerService,
+		SupplierService:        supplierService,
 		SkuService:             skuService,
 		PurchaseHistoryService: purchaseHistoryService,
 		OrderService:           orderService,

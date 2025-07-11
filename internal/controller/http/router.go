@@ -28,7 +28,7 @@ func NewRouter(handler *gin.Engine, services *service.Container, grpcClients *gr
 
 	h := handler.Group("/v1/api")
 	{
-		NewProviderRouter(h, services.ProviderService, services.Logger)
+		NewSupplierRouter(h, services.SupplierService, services.Logger)
 		NewSkuRouter(h, services.SkuService, services.Logger)
 		NewPurchaseHistoryRouter(h, services.PurchaseHistoryService, grpcClients.AuthGRPCClient, services.Logger)
 		NewOrderRouter(h, services.OrderService, grpcClients.AuthGRPCClient, services.Logger, services.Validator)

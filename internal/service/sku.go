@@ -8,8 +8,8 @@ import (
 )
 
 type SkuService interface {
-	GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]schema.SkuResponse, error)
-	GetSkusGroupByProvider(ctx context.Context) (*[]schema.SkusGroupByProvider, error)
+	GetSkusBySupplierCode(ctx context.Context, supplierCode string) (*[]schema.SkuResponse, error)
+	GetSkusGroupBySupplier(ctx context.Context) (*[]schema.SkusGroupBySupplier, error)
 }
 
 type skuService struct {
@@ -22,8 +22,8 @@ func NewSkuService(repo repository.SkuRepository) *skuService {
 	return &skuService{repo: repo}
 }
 
-func (s *skuService) GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]schema.SkuResponse, error) {
-	skus, err := s.repo.GetSkusByProviderCode(ctx, providerCode)
+func (s *skuService) GetSkusBySupplierCode(ctx context.Context, supplierCode string) (*[]schema.SkuResponse, error) {
+	skus, err := s.repo.GetSkusBySupplierCode(ctx, supplierCode)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (s *skuService) GetSkusByProviderCode(ctx context.Context, providerCode str
 	return &skuResponses, nil
 }
 
-func (s *skuService) GetSkusGroupByProvider(ctx context.Context) (*[]schema.SkusGroupByProvider, error) {
+func (s *skuService) GetSkusGroupBySupplier(ctx context.Context) (*[]schema.SkusGroupBySupplier, error) {
 	skus, err := s.repo.GetSkus(ctx)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (s *skuService) GetSkusGroupByProvider(ctx context.Context) (*[]schema.Skus
 	if skus == nil {
 		return nil, nil
 	}
-	groupedDetails := mapper.SkusGroupByProviderFromModel(*skus)
+	groupedDetails := mapper.SkusGroupBySupplierFromModel(*skus)
 	if groupedDetails == nil {
 		return nil, nil
 	}

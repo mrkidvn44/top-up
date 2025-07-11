@@ -10,19 +10,19 @@ type SkuResponse struct {
 	ID                uint `json:"id"`
 	Price             int  `json:"price"`
 	CashBackInterface `json:"cash_back"`
-	ProviderInfo      `json:"provider"`
+	SupplierInfo      `json:"supplier"`
 }
 
 type SkuMiniatureResponse struct {
 	ID                uint `json:"id"`
 	Price             int  `json:"price"`
-	CashBackInterface `json:"provider"`
+	CashBackInterface `json:"cashback"`
 }
 
-type SkusGroupByProvider struct {
-	ProviderCode    string                 `json:"provider_code"`
-	ProviderName    string                 `json:"provider_name"`
-	ProviderLogoUrl string                 `json:"provider_logo_url"`
+type SkusGroupBySupplier struct {
+	SupplierCode    string                 `json:"supplier_code"`
+	SupplierName    string                 `json:"supplier_name"`
+	SupplierLogoUrl string                 `json:"supplier_logo_url"`
 	Skus            []SkuMiniatureResponse `json:"sku"`
 }
 
@@ -31,7 +31,7 @@ func (c *SkuResponse) UnmarshalJSON(data []byte) error {
 		ID       uint            `json:"id"`
 		Price    int             `json:"price"`
 		CashBack json.RawMessage `json:"cash_back"`
-		Provider ProviderInfo    `json:"provider"`
+		Supplier SupplierInfo    `json:"supplier"`
 	}
 	if err := json.Unmarshal(data, &rawSku); err != nil {
 		return err
@@ -39,7 +39,7 @@ func (c *SkuResponse) UnmarshalJSON(data []byte) error {
 
 	c.ID = rawSku.ID
 	c.Price = rawSku.Price
-	c.ProviderInfo = rawSku.Provider
+	c.SupplierInfo = rawSku.Supplier
 	var typeDetector struct {
 		Type string `json:"type"`
 	}

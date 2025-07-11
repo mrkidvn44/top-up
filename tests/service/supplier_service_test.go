@@ -11,73 +11,73 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProviderService_GetProviders(t *testing.T) {
+func TestSupplierService_GetSuppliers(t *testing.T) {
 	ctx := context.Background()
 	type args struct {
 		ctx context.Context
 	}
 	tests := []struct {
 		name              string
-		setupMock         func(*mockRepo.ProviderRepositoryMock)
+		setupMock         func(*mockRepo.SupplierRepositoryMock)
 		args              args
-		expectedProviders *[]model.Provider
+		expectedSuppliers *[]model.Supplier
 		expectedError     string
 	}{
 		{
 			name: "Success",
-			setupMock: func(m *mockRepo.ProviderRepositoryMock) {
-				providers := &[]model.Provider{
+			setupMock: func(m *mockRepo.SupplierRepositoryMock) {
+				Suppliers := &[]model.Supplier{
 					{
 						Code:    "VTL",
 						Name:    "Viettel",
 						LogoUrl: "viettel.png",
-						Status:  string(model.ProviderStatusActive),
+						Status:  model.SupplierStatusActive,
 					},
 					{
 						Code:    "MBF",
 						Name:    "Mobifone",
 						LogoUrl: "mobifone.png",
-						Status:  string(model.ProviderStatusActive),
+						Status:  model.SupplierStatusActive,
 					},
 				}
 				m.ExpectedCalls = nil
-				m.On("GetProviders", ctx).Return(providers, nil)
+				m.On("GetSuppliers", ctx).Return(Suppliers, nil)
 			},
 			args: args{ctx: ctx},
-			expectedProviders: &[]model.Provider{
+			expectedSuppliers: &[]model.Supplier{
 				{
 					Code:    "VTL",
 					Name:    "Viettel",
 					LogoUrl: "viettel.png",
-					Status:  string(model.ProviderStatusActive),
+					Status:  model.SupplierStatusActive,
 				},
 				{
 					Code:    "MBF",
 					Name:    "Mobifone",
 					LogoUrl: "mobifone.png",
-					Status:  string(model.ProviderStatusActive),
+					Status:  model.SupplierStatusActive,
 				},
 			},
 			expectedError: "",
 		},
 		{
 			name: "Repository error",
-			setupMock: func(m *mockRepo.ProviderRepositoryMock) {
+			setupMock: func(m *mockRepo.SupplierRepositoryMock) {
 				m.ExpectedCalls = nil
-				m.On("GetProviders", ctx).Return(nil, errors.New("db error"))
+				m.On("GetSuppliers", ctx).Return(nil, errors.New("db error"))
 			},
 			args:              args{ctx: ctx},
-			expectedProviders: nil,
+			expectedSuppliers: nil,
 			expectedError:     "db error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(mockRepo.ProviderRepositoryMock)
+			mockRepo := new(mockRepo.SupplierRepositoryMock)
 			tt.setupMock(mockRepo)
-			svc := service.NewProviderService(mockRepo)
-			got, err := svc.GetProviders(tt.args.ctx)
+			svc := service.NewSupplierService(mockRepo)
+			got, err := svc.GetSuppliers(tt.args.ctx)
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err.Error())
@@ -85,10 +85,10 @@ func TestProviderService_GetProviders(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, got)
-				assert.Equal(t, len(*tt.expectedProviders), len(*got))
-				for i := range *tt.expectedProviders {
-					assert.Equal(t, (*tt.expectedProviders)[i].Code, (*got)[i].Code)
-					assert.Equal(t, (*tt.expectedProviders)[i].Name, (*got)[i].Name)
+				assert.Equal(t, len(*tt.expectedSuppliers), len(*got))
+				for i := range *tt.expectedSuppliers {
+					assert.Equal(t, (*tt.expectedSuppliers)[i].Code, (*got)[i].Code)
+					assert.Equal(t, (*tt.expectedSuppliers)[i].Name, (*got)[i].Name)
 				}
 			}
 		})

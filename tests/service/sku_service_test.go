@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSkuService_GetSkusByProviderCode(t *testing.T) {
+func TestSkuService_GetSkusBySupplierCode(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		name              string
-		providerCode      string
+		supplierCode      string
 		setupMock         func(*mockRepo.SkuRepositoryMock)
 		expectedDetails   *[]model.Sku
 		expectedError     string
@@ -23,28 +23,28 @@ func TestSkuService_GetSkusByProviderCode(t *testing.T) {
 	}{
 		{
 			name:         "Success",
-			providerCode: "VTL",
+			supplierCode: "VTL",
 			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				skus := &[]model.Sku{
-					{ProviderCode: "VTL"},
-					{ProviderCode: "VTL"},
+					{SupplierCode: "VTL"},
+					{SupplierCode: "VTL"},
 				}
 				m.ExpectedCalls = nil
-				m.On("GetSkusByProviderCode", ctx, "VTL").Return(skus, nil)
+				m.On("GetSkusBySupplierCode", ctx, "VTL").Return(skus, nil)
 			},
 			expectedDetails: &[]model.Sku{
-				{ProviderCode: "VTL"},
-				{ProviderCode: "VTL"},
+				{SupplierCode: "VTL"},
+				{SupplierCode: "VTL"},
 			},
 			expectedError:     "",
 			expectedNilResult: false,
 		},
 		{
 			name:         "Repository error",
-			providerCode: "VTL",
+			supplierCode: "VTL",
 			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				m.ExpectedCalls = nil
-				m.On("GetSkusByProviderCode", ctx, "VTL").Return(nil, errors.New("db error"))
+				m.On("GetSkusBySupplierCode", ctx, "VTL").Return(nil, errors.New("db error"))
 			},
 			expectedDetails:   nil,
 			expectedError:     "db error",
@@ -52,11 +52,11 @@ func TestSkuService_GetSkusByProviderCode(t *testing.T) {
 		},
 		{
 			name:         "No record",
-			providerCode: "VTL",
+			supplierCode: "VTL",
 			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				empty := &[]model.Sku{}
 				m.ExpectedCalls = nil
-				m.On("GetSkusByProviderCode", ctx, "VTL").Return(empty, nil)
+				m.On("GetSkusBySupplierCode", ctx, "VTL").Return(empty, nil)
 			},
 			expectedDetails:   &[]model.Sku{},
 			expectedError:     "",
@@ -64,10 +64,10 @@ func TestSkuService_GetSkusByProviderCode(t *testing.T) {
 		},
 		{
 			name:         "Nil from repo",
-			providerCode: "VTL",
+			supplierCode: "VTL",
 			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				m.ExpectedCalls = nil
-				m.On("GetSkusByProviderCode", ctx, "VTL").Return(nil, nil)
+				m.On("GetSkusBySupplierCode", ctx, "VTL").Return(nil, nil)
 			},
 			expectedDetails:   nil,
 			expectedError:     "",
@@ -80,7 +80,7 @@ func TestSkuService_GetSkusByProviderCode(t *testing.T) {
 			mockRepo := new(mockRepo.SkuRepositoryMock)
 			tt.setupMock(mockRepo)
 			svc := service.NewSkuService(mockRepo)
-			got, err := svc.GetSkusByProviderCode(ctx, tt.providerCode)
+			got, err := svc.GetSkusBySupplierCode(ctx, tt.supplierCode)
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err.Error())
@@ -97,7 +97,7 @@ func TestSkuService_GetSkusByProviderCode(t *testing.T) {
 	}
 }
 
-func TestSkuService_GetSkusGroupByProvider(t *testing.T) {
+func TestSkuService_GetSkusGroupBySupplier(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		name           string
@@ -111,12 +111,12 @@ func TestSkuService_GetSkusGroupByProvider(t *testing.T) {
 			setupMock: func(m *mockRepo.SkuRepositoryMock) {
 				skus := &[]model.Sku{
 					{
-						ProviderCode: "VTL",
-						Provider:     model.Provider{Code: "VTL", Name: "Viettel", LogoUrl: "logo1"},
+						SupplierCode: "VTL",
+						Supplier:     model.Supplier{Code: "VTL", Name: "Viettel", LogoUrl: "logo1"},
 					},
 					{
-						ProviderCode: "MBF",
-						Provider:     model.Provider{Code: "MBF", Name: "Mobifone", LogoUrl: "logo2"},
+						SupplierCode: "MBF",
+						Supplier:     model.Supplier{Code: "MBF", Name: "Mobifone", LogoUrl: "logo2"},
 					},
 				}
 				m.ExpectedCalls = nil
@@ -164,7 +164,7 @@ func TestSkuService_GetSkusGroupByProvider(t *testing.T) {
 			mockRepo := new(mockRepo.SkuRepositoryMock)
 			tt.setupMock(mockRepo)
 			svc := service.NewSkuService(mockRepo)
-			got, err := svc.GetSkusGroupByProvider(ctx)
+			got, err := svc.GetSkusGroupBySupplier(ctx)
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err.Error())
@@ -178,10 +178,10 @@ func TestSkuService_GetSkusGroupByProvider(t *testing.T) {
 				foundVTL := false
 				foundMBF := false
 				for _, group := range *got {
-					if group.ProviderCode == "VTL" {
+					if group.SupplierCode == "VTL" {
 						foundVTL = true
 					}
-					if group.ProviderCode == "MBF" {
+					if group.SupplierCode == "MBF" {
 						foundMBF = true
 					}
 				}

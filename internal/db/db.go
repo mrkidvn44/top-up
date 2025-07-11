@@ -7,7 +7,6 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type DB struct {
@@ -16,7 +15,7 @@ type DB struct {
 
 func NewDB(cfg *config.Config) (*DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.Postgres.DSN()), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		// Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
 		return nil, err

@@ -44,10 +44,22 @@ type orderService struct {
 	skuRepo             repository.SkuRepository
 	purchaseHistoryRepo repository.PurchaseHistoryRepository
 	redisClient         redis.Interface
-	providerGRPCClient  pb.ProviderGRPCClient
+	providerClient      map[string]providerServiceList
+}
+
+type providerServiceList struct {
+	totalWeight     int
+	providerClients []providerClient
+}
+
+type providerClient interface {
+	getCumulativeWeight() int
+	sendRequest(order *schema.OrderResponse) error
 }
 
 var _ OrderService = (*orderService)(nil)
+var _ providerClient = (*httpProviderClient)(nil)
+var _ providerClient = (*grpcProviderClient)(nil)
 
 func NewOrderService(
 	skuRepo repository.SkuRepository,
@@ -55,11 +67,21 @@ func NewOrderService(
 	redisClient redis.Interface,
 	providerGRPCClient pb.ProviderGRPCClient,
 ) *orderService {
+	providerClients := map[string]providerServiceList{
+		"providerA": {
+			totalWeight: 10,
+			providerClients: []providerClient{
+				&httpProviderClient{url: _providerURL, callbacks: _callbackURL, cumulativeWeight: 7},
+				&grpcProviderClient{client: providerGRPCClient, callbacks: _callbackURL, cumulativeWeight: 10},
+			},
+		},
+	}
+
 	return &orderService{
 		skuRepo:             skuRepo,
 		purchaseHistoryRepo: purchaseHistoryRepo,
 		redisClient:         redisClient,
-		providerGRPCClient:  providerGRPCClient,
+		providerClient:      providerClients,
 	}
 }
 
@@ -131,10 +153,8 @@ func (s *orderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 	}
 
 	if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
-		if orderResponse.RandomProviderWeight <= _httpCumulativeWeight {
-			go sendOrderResponse(_providerURL, orderResponse)
-		} else {
-			go s.providerGRPCClient.ProcessOrder(ctx, mapper.OrderProcessRequestFromOrder(orderResponse, _callbackURL))
+		for _, client := range s.providerClient["providerA"].providerClients {
+			go client.sendRequest(orderResponse)
 		}
 	}
 
@@ -209,18 +229,6 @@ func (s *orderService) updateCacheOrderStaus(ctx context.Context, cacheKey strin
 	return nil
 }
 
-func sendOrderResponse(url string, orderResponse *schema.OrderResponse) error {
-	orderProviderRequest := mapper.OrderProviderRequestFromOrderResponse(orderResponse, _callbackURL)
-	orderProviderRequestJSON, err := json.Marshal(orderProviderRequest)
-
-	if err != nil {
-		return errors.New("failed to marshal order response: " + err.Error())
-	}
-
-	util.SendPostRequest(url, orderProviderRequestJSON)
-	return nil
-}
-
 func sendFailedOrder(url string, orderUpdateInfo schema.OrderUpdateRequest) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"order_id": orderUpdateInfo.OrderID,
@@ -245,4 +253,40 @@ func getCachKey(orderID string) string {
 
 func getRandomWeight() int {
 	return rand.IntN(_totalWeight)
+}
+
+type httpProviderClient struct {
+	url              string
+	callbacks        string
+	cumulativeWeight int
+}
+
+func (h *httpProviderClient) sendRequest(order *schema.OrderResponse) error {
+	orderProviderRequest := mapper.OrderProviderRequestFromOrderResponse(order, h.callbacks)
+	orderProviderRequestJSON, err := json.Marshal(orderProviderRequest)
+	if err != nil {
+		return err
+	}
+	util.SendPostRequest(h.url, orderProviderRequestJSON)
+	return nil
+}
+
+func (h *httpProviderClient) getCumulativeWeight() int {
+	return h.cumulativeWeight
+}
+
+type grpcProviderClient struct {
+	client           pb.ProviderGRPCClient
+	callbacks        string
+	cumulativeWeight int
+}
+
+func (g *grpcProviderClient) sendRequest(order *schema.OrderResponse) error {
+	ctx := context.Background()
+	req := mapper.OrderProcessRequestFromOrder(order, g.callbacks)
+	return g.client.ProcessOrder(ctx, req)
+}
+
+func (g *grpcProviderClient) getCumulativeWeight() int {
+	return g.cumulativeWeight
 }

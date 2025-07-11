@@ -46,7 +46,7 @@ func (r *purchaseHistoryRepository) GetPurchaseHistoriesByUserIDPaginated(ctx co
 		Where("user_id = ?", userID).
 		Preload("User").
 		Preload("Sku").
-		Preload("Sku.Provider").
+		Preload("Sku.Supplier").
 		Preload("Sku.CashBack").
 		Limit(pageSize).
 		Offset(offset).
@@ -77,7 +77,7 @@ func (r *purchaseHistoryRepository) GetPurchaseHistoryByOrderID(ctx context.Cont
 		Where("order_id = ?", order_id).
 		Preload("User").
 		Preload("Sku").
-		Preload("Sku.Provider").
+		Preload("Sku.Supplier").
 		Preload("Sku.CashBack").
 		First(&purchaseHistory).Error; err != nil {
 		return nil, err

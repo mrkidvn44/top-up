@@ -1,4 +1,4 @@
-insert into "provider" (created_at, updated_at, deleted_at,name, code, logo_url, status) VALUES
+insert into "supplier" (created_at, updated_at, deleted_at, name, code, logo_url, status) VALUES
 (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null, 'Viettel', 'VTL', 'example.com.vn', 'active'),
 (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null,'MobiFone', 'MBF', 'example.com.vn', 'active'),
 (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null, 'Vinaphone', 'VNP', 'example.com.vn', 'active'),
@@ -25,7 +25,7 @@ VALUES
   ('CB50F', 'fixed', 50000, NOW(), NOW()),      -- 50,000 VND
   ('CB100F', 'fixed', 100000, NOW(), NOW());    -- 100,000 VND
 
-INSERT INTO sku (provider_code, cash_back_code, price, created_at, updated_at)
+INSERT INTO sku (supplier_code, cash_back_code, price, created_at, updated_at)
 VALUES
   -- Viettel: all prices, mix of cashback
   ('VTL', NULL, 10000, NOW(), NOW()),

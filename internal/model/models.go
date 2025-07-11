@@ -5,7 +5,7 @@ func GetModels() []interface{} {
 		&User{},
 		&Sku{},
 		&CashBack{},
-		&Provider{},
+		&Supplier{},
 		&PurchaseHistory{},
 	}
 }

@@ -11,8 +11,8 @@ type SkuRepositoryMock struct {
 	mock.Mock
 }
 
-func (m *SkuRepositoryMock) GetSkusByProviderCode(ctx context.Context, providerCode string) (*[]model.Sku, error) {
-	args := m.Called(ctx, providerCode)
+func (m *SkuRepositoryMock) GetSkusBySupplierCode(ctx context.Context, supplierCode string) (*[]model.Sku, error) {
+	args := m.Called(ctx, supplierCode)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

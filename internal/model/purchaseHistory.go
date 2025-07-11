@@ -22,7 +22,6 @@ type PurchaseHistory struct {
 	PhoneNumber   string                `json:"phone_number" gorm:"not null"`
 	CashBackValue int                   `json:"cash_back_value" gorm:"default:0"`
 	Status        PurchaseHistoryStatus `json:"status" gorm:"type:purchase_history_status; not null"`
-	User          User                  `json:"user" gorm:"foreignKey:UserID;references:ID"`
 	Sku           Sku                   `json:"sku" gorm:"foreignKey:SkuID;references:ID"`
 }
 

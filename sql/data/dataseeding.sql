@@ -86,7 +86,32 @@ VALUES
   ('GML', 'CB1F', 30000, NOW(), NOW()),
   ('GML', 'CB2F', 50000, NOW(), NOW()),
   ('GML', 'CB5F', 100000, NOW(), NOW()),
-  ('GML', 'CB10F', 200000, NOW(), NOW()); 
-INSERT INTO "user" (created_at, updated_at, deleted_at, first_name, last_name, password, phone_number )
+  ('GML', 'CB10F', 200000, NOW(), NOW());
+INSERT INTO provider (created_at, updated_at, deleted_at, code, source, type, weight)
 VALUES
-  ( CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null, 'John', 'Doe', '$2a$14$QpdzQDCUaWutaB0WPJFz..LJPffpLAdsqZv/O8xPkwk77/9nRxeFG', '0358571286')
+  (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null, 'HTTP01', 'http://localhost:8082/v1/api/order/', 'http', 5),
+  (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, null, 'GRPC01', 'localhost:50053', 'grpc', 5);
+-- Assign HTTP to: VTL, VNM
+INSERT INTO provider_suppliers (provider_id, supplier_id)
+SELECT p.id, s.id
+FROM provider p, supplier s
+WHERE p.code = 'HTTP01' AND s.code IN ('VTL', 'VNM');
+
+-- Assign GRPC only to: MBF, WNT
+INSERT INTO provider_suppliers (provider_id, supplier_id)
+SELECT p.id, s.id
+FROM provider p, supplier s
+WHERE p.code = 'GRPC01' AND s.code IN ('MBF', 'WNT');
+
+-- Assign BOTH HTTP + GRPC to: VNP, ITL
+-- HTTP
+INSERT INTO provider_suppliers (provider_id, supplier_id)
+SELECT p.id, s.id
+FROM provider p, supplier s
+WHERE p.code = 'HTTP01' AND s.code IN ('VNP', 'ITL');
+
+-- GRPC
+INSERT INTO provider_suppliers (provider_id, supplier_id)
+SELECT p.id, s.id
+FROM provider p, supplier s
+WHERE p.code = 'GRPC01' AND s.code IN ('VNP', 'ITL');

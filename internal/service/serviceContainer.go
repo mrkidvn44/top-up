@@ -41,12 +41,13 @@ func NewContainer(
 	supplierRepository := repository.NewSupplierRepository(database)
 	skuRepository := repository.NewSkuRepository(database)
 	purchaseHistoryRepository := repository.NewPurchaseHistoryRepository(database)
+	providerRepository := repository.NewProviderRepository(database)
 
 	// Initialize services
 	supplierService := NewSupplierService(supplierRepository)
 	skuService := NewSkuService(skuRepository)
 	purchaseHistoryService := NewPurchaseHistoryService(purchaseHistoryRepository)
-	orderService := NewOrderService(skuRepository, purchaseHistoryRepository, redis, grpcClients.ProviderGRPCClient)
+	orderService := NewOrderService(skuRepository, purchaseHistoryRepository, redis, grpcClients, providerRepository)
 
 	return &Container{
 		// Core dependencies

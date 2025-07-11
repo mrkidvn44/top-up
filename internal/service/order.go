@@ -22,16 +22,12 @@ import (
 )
 
 const (
-	_lockTimeOut          = 5 * time.Minute
-	_cacheTime            = 30 * time.Minute
-	_cacheKey             = "order_id"
-	_paymentCreateURL     = "http://localhost:8081/v1/api/order/create"
-	_paymentUpdateURL     = "http://localhost:8081/v1/api/order/update"
-	_providerURL          = "http://localhost:8082/v1/api/order/"
-	_callbackURL          = "http://localhost:8080/v1/api/order/update-status"
-	_totalWeight          = 10
-	_httpCumulativeWeight = 3
-	_grpcCumulativeWeight = 10
+	_lockTimeOut      = 5 * time.Minute
+	_cacheTime        = 30 * time.Minute
+	_cacheKey         = "order_id"
+	_paymentCreateURL = "http://localhost:8081/v1/api/order/create"
+	_paymentUpdateURL = "http://localhost:8081/v1/api/order/update"
+	_callbackURL      = "http://localhost:8080/v1/api/order/update-status"
 )
 
 type OrderService interface {
@@ -44,7 +40,7 @@ type orderService struct {
 	skuRepo             repository.SkuRepository
 	purchaseHistoryRepo repository.PurchaseHistoryRepository
 	redisClient         redis.Interface
-	providerClient      map[string]providerServiceList
+	providerClients     map[string]providerServiceList
 }
 
 type providerServiceList struct {
@@ -65,23 +61,15 @@ func NewOrderService(
 	skuRepo repository.SkuRepository,
 	purchaseHistoryRepo repository.PurchaseHistoryRepository,
 	redisClient redis.Interface,
-	providerGRPCClient pb.ProviderGRPCClient,
+	grpcClients pb.GRPCServiceClient,
+	providerRepo repository.ProviderRepository,
 ) *orderService {
-	providerClients := map[string]providerServiceList{
-		"providerA": {
-			totalWeight: 10,
-			providerClients: []providerClient{
-				&httpProviderClient{url: _providerURL, callbacks: _callbackURL, cumulativeWeight: 7},
-				&grpcProviderClient{client: providerGRPCClient, callbacks: _callbackURL, cumulativeWeight: 10},
-			},
-		},
-	}
 
 	return &orderService{
 		skuRepo:             skuRepo,
 		purchaseHistoryRepo: purchaseHistoryRepo,
 		redisClient:         redisClient,
-		providerClient:      providerClients,
+		providerClients:     getProviderClientsListMapping(providerRepo, grpcClients),
 	}
 }
 
@@ -96,7 +84,8 @@ func (s *orderService) CreateOrder(ctx context.Context, order schema.OrderReques
 
 	orderID := util.GenerateOrderID()
 	orderResponse := mapper.OrderResponseFromOrderRequest(order, sku, orderID)
-	orderResponse.RandomProviderWeight = getRandomWeight()
+	SupplierCode := orderResponse.Sku.SupplierInfo.Code
+	orderResponse.RandomProviderWeight = getRandomWeight(s.providerClients[SupplierCode].totalWeight)
 
 	orderResponseJSON, err := json.Marshal(orderResponse)
 	if err != nil {
@@ -153,9 +142,7 @@ func (s *orderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 	}
 
 	if orderConfirmRequest.Status == model.PurchaseHistoryStatusConfirm {
-		for _, client := range s.providerClient["providerA"].providerClients {
-			go client.sendRequest(orderResponse)
-		}
+		go s.sendRequestToProvider(orderResponse)
 	}
 
 	return nil
@@ -229,6 +216,19 @@ func (s *orderService) updateCacheOrderStaus(ctx context.Context, cacheKey strin
 	return nil
 }
 
+func (s *orderService) sendRequestToProvider(orderResponse *schema.OrderResponse) error {
+	supplierCode := orderResponse.Sku.SupplierInfo.Code
+
+	for _, client := range s.providerClients[supplierCode].providerClients {
+		if orderResponse.RandomProviderWeight <= client.getCumulativeWeight() {
+			err := client.sendRequest(orderResponse)
+			return err
+		}
+
+	}
+	return errors.New("can't find suitable provider")
+}
+
 func sendFailedOrder(url string, orderUpdateInfo schema.OrderUpdateRequest) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"order_id": orderUpdateInfo.OrderID,
@@ -251,8 +251,8 @@ func getCachKey(orderID string) string {
 	return _cacheKey + orderID
 }
 
-func getRandomWeight() int {
-	return rand.IntN(_totalWeight)
+func getRandomWeight(totalWeight int) int {
+	return rand.IntN(totalWeight)
 }
 
 type httpProviderClient struct {
@@ -283,10 +283,51 @@ type grpcProviderClient struct {
 
 func (g *grpcProviderClient) sendRequest(order *schema.OrderResponse) error {
 	ctx := context.Background()
+	defer ctx.Done()
 	req := mapper.OrderProcessRequestFromOrder(order, g.callbacks)
 	return g.client.ProcessOrder(ctx, req)
 }
 
 func (g *grpcProviderClient) getCumulativeWeight() int {
 	return g.cumulativeWeight
+}
+
+func getProviderClientsListMapping(providerRepo repository.ProviderRepository, grpcClients pb.GRPCServiceClient) map[string]providerServiceList {
+	ctx := context.Background()
+	providers, err := providerRepo.GetProvidersWithSuppliers(ctx)
+	if err != nil {
+		panic("failed to load providers: " + err.Error())
+	}
+
+	grpcClients.BuildProviderGRPCClients(providers)
+	supplierClients := make(map[string]providerServiceList)
+
+	for _, provider := range providers {
+		for _, supplier := range provider.Suppliers {
+			entry := supplierClients[supplier.Code]
+			cumulativeWeight := entry.totalWeight + provider.Weight
+
+			client := createProviderClient(provider, grpcClients, cumulativeWeight)
+			entry.providerClients = append(entry.providerClients, client)
+			entry.totalWeight = cumulativeWeight
+			supplierClients[supplier.Code] = entry
+		}
+	}
+
+	return supplierClients
+}
+
+func createProviderClient(provider model.Provider, grpcClients pb.GRPCServiceClient, cumulativeWeight int) providerClient {
+	switch provider.Type {
+	case "http":
+		return &httpProviderClient{
+			url: provider.Source, callbacks: _callbackURL, cumulativeWeight: cumulativeWeight,
+		}
+	case "grpc":
+		return &grpcProviderClient{
+			client: grpcClients.ProviderGRPCClients[provider.Code], callbacks: _callbackURL, cumulativeWeight: cumulativeWeight,
+		}
+	default:
+		panic("unsupported provider type: " + provider.Type)
+	}
 }

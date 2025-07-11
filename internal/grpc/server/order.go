@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"top-up-api/internal/mapper"
 	"top-up-api/internal/service"
 	pb "top-up-api/proto/order"
@@ -34,10 +35,11 @@ func (s *OrderGRPCServer) ConfirmOrder(ctx context.Context, req *pb.OrderConfirm
 
 }
 
-func (s *OrderGRPCServer) UpdateOrderStatus(ctx context.Context, req *pb.OrderUpdateRequest) (*pb.OrderUpdateResponse, error){
+func (s *OrderGRPCServer) UpdateOrderStatus(ctx context.Context, req *pb.OrderUpdateRequest) (*pb.OrderUpdateResponse, error) {
 	orderUpdateRequest := mapper.OrderUpdateRequestFromProto(req)
 	err := s.orderService.UpdateOrderStatus(ctx, *orderUpdateRequest)
 	if err != nil {
+		fmt.Print(err)
 		return &pb.OrderUpdateResponse{
 			Success: false,
 			Error:   err.Error(),

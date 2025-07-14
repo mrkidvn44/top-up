@@ -22,12 +22,14 @@ import (
 )
 
 const (
-	_lockTimeOut      = 5 * time.Minute
-	_cacheTime        = 30 * time.Minute
-	_cacheKey         = "order_id"
-	_paymentCreateURL = "http://localhost:8081/v1/api/order/create"
-	_paymentUpdateURL = "http://localhost:8081/v1/api/order/update"
-	_callbackURL      = "http://localhost:8080/v1/api/order/update-status"
+	_lockTimeOut              = 5 * time.Minute
+	_orderCacheTime           = 30 * time.Minute
+	_idempotencyCacheTime     = 24 * time.Hour
+	_orderRequestKeyPrefix    = "order_id"
+	_providerRequestKeyPrefix = "order_req_id"
+	_paymentCreateURL         = "http://localhost:8081/v1/api/order/create"
+	_paymentUpdateURL         = "http://localhost:8081/v1/api/order/update"
+	_callbackURL              = "http://localhost:8080/v1/api/order/update-status"
 )
 
 type OrderService interface {
@@ -92,8 +94,8 @@ func (s *orderService) CreateOrder(ctx context.Context, order schema.OrderReques
 		return nil, errors.New("failed to marshal order response: " + err.Error())
 	}
 
-	cacheKey := getCachKey(strconv.Itoa(int(orderID)))
-	err = s.redisClient.Set(ctx, cacheKey, orderResponseJSON, _cacheTime)
+	cacheKey := getCachKey(_orderRequestKeyPrefix, strconv.Itoa(int(orderID)))
+	err = s.redisClient.Set(ctx, cacheKey, orderResponseJSON, _orderCacheTime)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +113,7 @@ func (s *orderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 	}
 	defer s.redisClient.ReleaseLock(ctx, orderID)
 
-	cacheKey := getCachKey(orderID)
+	cacheKey := getCachKey(_orderRequestKeyPrefix, orderID)
 
 	orderResponse, err := s.getCachedOrder(ctx, cacheKey)
 	if err != nil {
@@ -150,37 +152,50 @@ func (s *orderService) ConfirmOrder(ctx context.Context, orderConfirmRequest sch
 
 func (s *orderService) UpdateOrderStatus(ctx context.Context, orderUpdateInfo schema.OrderUpdateRequest) error {
 	orderID := strconv.Itoa(int(orderUpdateInfo.OrderID))
-	err := s.redisClient.TryAcquireLock(ctx, orderID, _lockTimeOut)
+
+	idempotencyKey := getCachKey(_providerRequestKeyPrefix, orderID)
+	cachedResponse, err := s.redisClient.Get(ctx, idempotencyKey)
+	if err == nil && cachedResponse != "" {
+		return getIdempotencyResponseValue(cachedResponse)
+	}
+
+	err = s.redisClient.TryAcquireLock(ctx, orderID, _lockTimeOut)
 	if err != nil {
 		return err
 	}
 	defer s.redisClient.ReleaseLock(ctx, orderID)
 
-	cacheKey := getCachKey(orderID)
-
-	orderResponse, err := s.getCachedOrder(ctx, cacheKey)
+	orderCacheKey := getCachKey(_orderRequestKeyPrefix, orderID)
+	orderResponse, err := s.getCachedOrder(ctx, orderCacheKey)
 	if err != nil {
+		s.cacheIdempotencyResponse(ctx, idempotencyKey, false, err.Error())
 		return err
 	}
 
 	if orderResponse.Status != model.PurchaseHistoryStatusConfirm {
-		return errors.New("order is not confirmed or failed")
+		err := errors.New("order is not confirmed or failed")
+		s.cacheIdempotencyResponse(ctx, idempotencyKey, false, err.Error())
+		return err
 	}
 
 	err = s.purchaseHistoryRepo.UpdatePurchaseHistoryStatusByOrderID(ctx, orderUpdateInfo.OrderID, orderUpdateInfo.Status)
 	if err != nil {
+		s.cacheIdempotencyResponse(ctx, idempotencyKey, false, err.Error())
 		return err
 	}
 
 	orderResponse.Status = orderUpdateInfo.Status
-	err = s.updateCacheOrderStaus(ctx, cacheKey, orderResponse)
+	err = s.updateCacheOrderStaus(ctx, orderCacheKey, orderResponse)
 	if err != nil {
+		s.cacheIdempotencyResponse(ctx, idempotencyKey, false, err.Error())
 		return err
 	}
 
 	if orderUpdateInfo.Status == model.PurchaseHistoryStatusFailed {
 		go sendFailedOrder(_paymentUpdateURL, orderUpdateInfo)
 	}
+
+	s.cacheIdempotencyResponse(ctx, idempotencyKey, true, "")
 
 	return nil
 }
@@ -208,12 +223,27 @@ func (s *orderService) updateCacheOrderStaus(ctx context.Context, cacheKey strin
 		return errors.New("failed to marshal order response: " + err.Error())
 	}
 
-	err = s.redisClient.Set(ctx, cacheKey, orderResponseJSON, _cacheTime)
+	err = s.redisClient.Set(ctx, cacheKey, orderResponseJSON, _orderCacheTime)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *orderService) cacheIdempotencyResponse(ctx context.Context, key string, success bool, errorMessage string) {
+	response := schema.OrderIdempotencyResponse{
+		Success:      success,
+		ErrorMessage: errorMessage,
+		Timestamp:    time.Now().Unix(),
+	}
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		return
+	}
+
+	s.redisClient.Set(ctx, key, responseJSON, _idempotencyCacheTime)
 }
 
 func (s *orderService) sendRequestToProvider(orderResponse *schema.OrderResponse) error {
@@ -247,12 +277,23 @@ func sendFailedOrder(url string, orderUpdateInfo schema.OrderUpdateRequest) {
 	}
 }
 
-func getCachKey(orderID string) string {
-	return _cacheKey + orderID
+func getCachKey(prefix string, orderID string) string {
+	return prefix + orderID
 }
 
 func getRandomWeight(totalWeight int) int {
 	return rand.IntN(totalWeight)
+}
+
+func getIdempotencyResponseValue(cachedResponse string) error {
+	var idempotencyResponse schema.OrderIdempotencyResponse
+	if err := json.Unmarshal([]byte(cachedResponse), &idempotencyResponse); err != nil {
+		return errors.New("failed to unmarshal idempotency response: " + err.Error())
+	}
+	if idempotencyResponse.Success {
+		return nil
+	}
+	return errors.New(idempotencyResponse.ErrorMessage)
 }
 
 type httpProviderClient struct {

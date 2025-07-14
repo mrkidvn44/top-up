@@ -54,6 +54,13 @@ func (o *OrderResponse) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, o)
 }
 
+type OrderIdempotencyResponse struct {
+    Success      bool   `json:"success"`
+    ErrorMessage string `json:"error_message,omitempty"`
+    Timestamp    int64  `json:"timestamp"`
+}
+
+
 func (o *OrderResponse) CompareWithOrderConfirmRequest(orderConfirmRequest OrderConfirmRequest) bool {
 	return o.OrderID == orderConfirmRequest.OrderID &&
 		o.UserID == orderConfirmRequest.UserID &&

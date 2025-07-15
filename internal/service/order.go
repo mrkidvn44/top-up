@@ -282,6 +282,9 @@ func getCachKey(prefix string, orderID string) string {
 }
 
 func getRandomWeight(totalWeight int) int {
+	if totalWeight <= 0 {
+		return 0
+	}
 	return rand.IntN(totalWeight)
 }
 

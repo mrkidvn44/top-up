@@ -39,7 +39,7 @@ func New(level string, env string) *zapLogger {
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoderConfig.StacktraceKey = ""
 
-	if env == "PROD" {
+	if env == "PROD" || env == "dev" {
 		config = &zap.Config{
 			Level:            zap.NewAtomicLevelAt(*l),
 			Encoding:         "json",

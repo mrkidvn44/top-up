@@ -72,71 +72,6 @@ var (
 		PhoneNumber: "",
 	}
 
-	confirmReqVTLConfirm = schema.OrderConfirmRequest{
-		OrderID:       1001,
-		UserID:        1,
-		SkuID:         1,
-		TotalPrice:    10000,
-		Status:        model.PurchaseHistoryStatusConfirm,
-		PhoneNumber:   "081234567890",
-		CashBackValue: 500,
-	}
-	confirmReqMBFFailed = schema.OrderConfirmRequest{
-		OrderID:       1002,
-		UserID:        2,
-		SkuID:         2,
-		TotalPrice:    20000,
-		Status:        model.PurchaseHistoryStatusFailed,
-		PhoneNumber:   "082345678901",
-		CashBackValue: 1000,
-	}
-	confirmReqVTLUserMismatch = schema.OrderConfirmRequest{
-		OrderID:       1006,
-		UserID:        2, // Different from cached order
-		SkuID:         1,
-		TotalPrice:    10000,
-		Status:        model.PurchaseHistoryStatusConfirm,
-		PhoneNumber:   "081234567890",
-		CashBackValue: 500,
-	}
-	confirmReqVTLPriceMismatch = schema.OrderConfirmRequest{
-		OrderID:       1007,
-		UserID:        1,
-		SkuID:         1,
-		TotalPrice:    15000, 
-		Status:        model.PurchaseHistoryStatusConfirm,
-		PhoneNumber:   "081234567890",
-		CashBackValue: 500,
-	}
-	confirmReqVTLPending = schema.OrderConfirmRequest{
-		OrderID:       1008,
-		UserID:        1,
-		SkuID:         1,
-		TotalPrice:    10000,
-		Status:        model.PurchaseHistoryStatusPending, 
-		PhoneNumber:   "081234567890",
-		CashBackValue: 500,
-	}
-	confirmReqVTLAlreadyConfirmed = schema.OrderConfirmRequest{
-		OrderID:       1009,
-		UserID:        1,
-		SkuID:         1,
-		TotalPrice:    10000,
-		Status:        model.PurchaseHistoryStatusConfirm,
-		PhoneNumber:   "081234567890",
-		CashBackValue: 500,
-	}
-	confirmReqVTLDBError = schema.OrderConfirmRequest{
-		OrderID:       1010,
-		UserID:        1,
-		SkuID:         1,
-		TotalPrice:    10000,
-		Status:        model.PurchaseHistoryStatusConfirm,
-		PhoneNumber:   "081234567890",
-		CashBackValue: 500,
-	}
-
-
 	confirmReqVTLConfirmStatus = schema.OrderConfirmRequest{
 		OrderID:       1001,
 		UserID:        1,
@@ -228,7 +163,6 @@ var (
 		CashBackValue: 500,
 	}
 
-
 	updateReqSuccess = schema.OrderUpdateRequest{
 		OrderID:     1001,
 		Status:      model.PurchaseHistoryStatusSuccess,
@@ -254,6 +188,7 @@ type ConfirmOrderTestCase struct {
 	OrderConfirmRequest schema.OrderConfirmRequest
 	SetupMocks          func(*mockRepo.SkuRepositoryMock, *mockRepo.PurchaseHistoryRepositoryMock, *mockGrpc.RedisMock, *mockRepo.ProviderRepositoryMock)
 	ExpectedError       string
+	GRPCSetup           *util.GRPCClientSetup // Optional gRPC setup configuration
 }
 
 type UpdateOrderStatusTestCase struct {
@@ -261,13 +196,6 @@ type UpdateOrderStatusTestCase struct {
 	OrderUpdateRequest schema.OrderUpdateRequest
 	SetupMocks         func(*mockRepo.SkuRepositoryMock, *mockRepo.PurchaseHistoryRepositoryMock, *mockGrpc.RedisMock, *mockRepo.ProviderRepositoryMock)
 	ExpectedError      string
-}
-
-type ConfirmOrderEdgeCase struct {
-	Name                string
-	OrderConfirmRequest schema.OrderConfirmRequest
-	SetupMocks          func(*mockRepo.SkuRepositoryMock, *mockRepo.PurchaseHistoryRepositoryMock, *mockGrpc.RedisMock, *mockRepo.ProviderRepositoryMock)
-	ExpectedError       string
 }
 
 func runTableDrivenTests[T any](t *testing.T, cases []T, run func(*testing.T, T)) {
@@ -284,8 +212,6 @@ func getTestCaseName(tc any) string {
 	case CreateOrderTestCase:
 		return v.Name
 	case ConfirmOrderTestCase:
-		return v.Name
-	case ConfirmOrderEdgeCase:
 		return v.Name
 	case UpdateOrderStatusTestCase:
 		return v.Name
@@ -522,15 +448,50 @@ func TestOrderService_CreateOrder(t *testing.T) {
 func TestOrderService_ConfirmOrder(t *testing.T) {
 	tests := []ConfirmOrderTestCase{
 		{
-			Name:                "successful order confirmation with status confirm",
+			Name:                "successful order confirmation with status confirm - HTTP provider",
 			OrderConfirmRequest: confirmReqVTLConfirmStatus,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLConfirmStatus.OrderID, confirmReqVTLConfirmStatus.UserID, confirmReqVTLConfirmStatus.TotalPrice, confirmReqVTLConfirmStatus.PhoneNumber, confirmReqVTLConfirmStatus.CashBackValue, confirmReqVTLConfirmStatus.SkuID, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				util.SetupConfirmOrderMocks(redis, providerRepo, purchaseRepo, "1001", cachedOrder, nil)
-				purchaseRepo.ExpectedCalls = nil // Clear the calls from helper
-				purchaseRepo.On("CreatePurchaseHistory", mock.Anything, mock.MatchedBy(func(ph *model.PurchaseHistory) bool {
-					return ph.OrderID == confirmReqVTLConfirmStatus.OrderID && ph.UserID == confirmReqVTLConfirmStatus.UserID && ph.Status == model.PurchaseHistoryStatusConfirm
-				})).Return(nil)
+				providers := util.SingleProvider("VTL", "Viettel")
+				util.SetupBasicConfirmOrderTest(redis, providerRepo, purchaseRepo, "1001", confirmReqVTLConfirmStatus, "VTL", "Viettel", model.CashBackTypePercentage, 5, providers)
+			},
+			ExpectedError: "",
+		},
+		{
+			Name:                "successful order confirmation with status confirm - gRPC provider",
+			OrderConfirmRequest: confirmReqVTLConfirmStatus,
+			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
+				providers := util.SingleGrpcProvider("GRPC_PROVIDER1", "VTL", "Viettel")
+				util.SetupBasicConfirmOrderTest(redis, providerRepo, purchaseRepo, "1001", confirmReqVTLConfirmStatus, "VTL", "Viettel", model.CashBackTypePercentage, 5, providers)
+			},
+			GRPCSetup: &util.GRPCClientSetup{
+				ProviderCode: "GRPC_PROVIDER1",
+				ShouldError:  false,
+			},
+			ExpectedError: "",
+		},
+		{
+			Name:                "successful order confirmation with status failed - gRPC provider",
+			OrderConfirmRequest: confirmReqMBFFailedStatus,
+			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
+				providers := util.SingleGrpcProvider("GRPC_PROVIDER2", "MBF", "Mobifone")
+				util.SetupBasicConfirmOrderTest(redis, providerRepo, purchaseRepo, "1002", confirmReqMBFFailedStatus, "MBF", "Mobifone", model.CashBackTypeFixed, 1000, providers)
+			},
+			GRPCSetup: &util.GRPCClientSetup{
+				ProviderCode: "GRPC_PROVIDER2",
+				ShouldError:  false,
+			},
+			ExpectedError: "",
+		},
+		{
+			Name:                "successful order confirmation with mixed providers - should use gRPC",
+			OrderConfirmRequest: confirmReqVTLConfirmStatus,
+			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
+				providers := util.MixedProviders("VTL", "Viettel")
+				util.SetupBasicConfirmOrderTest(redis, providerRepo, purchaseRepo, "1001", confirmReqVTLConfirmStatus, "VTL", "Viettel", model.CashBackTypePercentage, 5, providers)
+			},
+			GRPCSetup: &util.GRPCClientSetup{
+				ProviderCode: "GRPC_PROVIDER1",
+				ShouldError:  false,
 			},
 			ExpectedError: "",
 		},
@@ -538,25 +499,30 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "successful order confirmation with status failed",
 			OrderConfirmRequest: confirmReqMBFFailedStatus,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("MBF", "Mobifone"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1002", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1002").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqMBFFailedStatus.OrderID, confirmReqMBFFailedStatus.UserID, confirmReqMBFFailedStatus.TotalPrice, confirmReqMBFFailedStatus.PhoneNumber, confirmReqMBFFailedStatus.CashBackValue, confirmReqMBFFailedStatus.SkuID, "MBF", "Mobifone", model.CashBackTypeFixed, 1000)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1002").Return(string(cachedOrderJSON), nil)
-				purchaseRepo.On("CreatePurchaseHistory", mock.Anything, mock.MatchedBy(func(ph *model.PurchaseHistory) bool {
-					return ph.OrderID == confirmReqMBFFailedStatus.OrderID && ph.UserID == confirmReqMBFFailedStatus.UserID && ph.Status == model.PurchaseHistoryStatusFailed
-				})).Return(nil)
-				redis.On("Set", mock.Anything, "order_id1002", mock.AnythingOfType("[]uint8"), mock.AnythingOfType("time.Duration")).Return(nil)
+				providers := util.SingleProvider("MBF", "Mobifone")
+				util.SetupBasicConfirmOrderTest(redis, providerRepo, purchaseRepo, "1002", confirmReqMBFFailedStatus, "MBF", "Mobifone", model.CashBackTypeFixed, 1000, providers)
 			},
 			ExpectedError: "",
+		},
+		{
+			Name:                "gRPC provider error during order processing",
+			OrderConfirmRequest: confirmReqVTLConfirmStatus,
+			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
+				providers := util.SingleGrpcProvider("GRPC_PROVIDER_ERROR", "VTL", "Viettel")
+				util.SetupBasicConfirmOrderTest(redis, providerRepo, purchaseRepo, "1001", confirmReqVTLConfirmStatus, "VTL", "Viettel", model.CashBackTypePercentage, 5, providers)
+			},
+			GRPCSetup: &util.GRPCClientSetup{
+				ProviderCode: "GRPC_PROVIDER_ERROR",
+				ShouldError:  true,
+				ErrorMessage: "gRPC connection failed",
+			},
+			ExpectedError: "", // gRPC errors don't fail the confirmation, they're handled asynchronously
 		},
 		{
 			Name:                "lock acquisition failed",
 			OrderConfirmRequest: confirmReqVTLFailedLock,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1003", mock.AnythingOfType("time.Duration")).Return(errors.New("lock acquisition failed"))
+				util.SetupErrorConfirmOrderTest(redis, providerRepo, "1003", errors.New("lock acquisition failed"), nil, "")
 			},
 			ExpectedError: "lock acquisition failed",
 		},
@@ -564,10 +530,7 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "order not found in cache",
 			OrderConfirmRequest: confirmReqVTLNotFound,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1004", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1004").Return(nil)
-				redis.On("Get", mock.Anything, "order_id1004").Return("", errors.New("key not found"))
+				util.SetupErrorConfirmOrderTest(redis, providerRepo, "1004", nil, errors.New("key not found"), "")
 			},
 			ExpectedError: "order not found or expired",
 		},
@@ -575,10 +538,7 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "corrupted cached order data",
 			OrderConfirmRequest: confirmReqVTLCorrupt,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1005", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1005").Return(nil)
-				redis.On("Get", mock.Anything, "order_id1005").Return("invalid json data", nil)
+				util.SetupErrorConfirmOrderTest(redis, providerRepo, "1005", nil, nil, "invalid json data")
 			},
 			ExpectedError: "failed to unmarshal order",
 		},
@@ -586,12 +546,8 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "order mismatch - different user ID",
 			OrderConfirmRequest: confirmReqVTLUserMismatchMain,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1006", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1006").Return(nil)
 				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLUserMismatchMain.OrderID, 1, 10000, confirmReqVTLUserMismatchMain.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1006").Return(string(cachedOrderJSON), nil)
+				util.SetupOrderMismatchTest(redis, providerRepo, confirmReqVTLUserMismatchMain, "1006", cachedOrder)
 			},
 			ExpectedError: "order mismatch",
 		},
@@ -599,12 +555,8 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "order mismatch - different total price",
 			OrderConfirmRequest: confirmReqVTLPriceMismatchMain,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1007", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1007").Return(nil)
 				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLPriceMismatchMain.OrderID, 1, 10000, confirmReqVTLPriceMismatchMain.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1007").Return(string(cachedOrderJSON), nil)
+				util.SetupOrderMismatchTest(redis, providerRepo, confirmReqVTLPriceMismatchMain, "1007", cachedOrder)
 			},
 			ExpectedError: "order mismatch",
 		},
@@ -612,12 +564,8 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "order status pending - invalid status transition",
 			OrderConfirmRequest: confirmReqVTLPendingMain,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1008", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1008").Return(nil)
 				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLPendingMain.OrderID, 1, 10000, confirmReqVTLPendingMain.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1008").Return(string(cachedOrderJSON), nil)
+				util.SetupOrderMismatchTest(redis, providerRepo, confirmReqVTLPendingMain, "1008", cachedOrder)
 			},
 			ExpectedError: "order is pending",
 		},
@@ -625,13 +573,9 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "order already confirmed",
 			OrderConfirmRequest: confirmReqVTLAlreadyConfirmedMain,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1009", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1009").Return(nil)
 				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLAlreadyConfirmedMain.OrderID, 1, 10000, confirmReqVTLAlreadyConfirmedMain.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
 				cachedOrder.Status = model.PurchaseHistoryStatusConfirm // Already confirmed
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1009").Return(string(cachedOrderJSON), nil)
+				util.SetupOrderMismatchTest(redis, providerRepo, confirmReqVTLAlreadyConfirmedMain, "1009", cachedOrder)
 			},
 			ExpectedError: "order already confirmed or failed",
 		},
@@ -639,12 +583,15 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			Name:                "database error during purchase history creation",
 			OrderConfirmRequest: confirmReqVTLDBErrorMain,
 			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
+				providers := util.SingleProvider("VTL", "Viettel")
+				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(providers, nil)
 				redis.On("TryAcquireLock", mock.Anything, "1010", mock.AnythingOfType("time.Duration")).Return(nil)
 				redis.On("ReleaseLock", mock.Anything, "1010").Return(nil)
+
 				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLDBErrorMain.OrderID, 1, 10000, confirmReqVTLDBErrorMain.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
 				cachedOrderJSON, _ := json.Marshal(cachedOrder)
 				redis.On("Get", mock.Anything, "order_id1010").Return(string(cachedOrderJSON), nil)
+
 				purchaseRepo.On("CreatePurchaseHistory", mock.Anything, mock.MatchedBy(func(ph *model.PurchaseHistory) bool {
 					return ph.OrderID == confirmReqVTLDBErrorMain.OrderID && ph.UserID == confirmReqVTLDBErrorMain.UserID && ph.Status == model.PurchaseHistoryStatusConfirm
 				})).Return(errors.New("database connection failed"))
@@ -656,12 +603,18 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 		skuRepo := new(mockRepo.SkuRepositoryMock)
 		purchaseRepo := new(mockRepo.PurchaseHistoryRepositoryMock)
 		redis := new(mockGrpc.RedisMock)
+
 		grpcClients := &grpcClient.GRPCServiceClient{
 			ProviderGRPCClients: make(map[string]grpcClient.ProviderGRPCClient),
 		}
 		providerRepo := new(mockRepo.ProviderRepositoryMock)
 
 		tc.SetupMocks(skuRepo, purchaseRepo, redis, providerRepo)
+
+		// Setup gRPC client mocks if needed
+		if tc.GRPCSetup != nil {
+			util.SetupGRPCMockClient(grpcClients, tc.GRPCSetup)
+		}
 
 		orderService := service.NewOrderService(skuRepo, purchaseRepo, redis, *grpcClients, providerRepo)
 		err := orderService.ConfirmOrder(context.Background(), tc.OrderConfirmRequest)
@@ -678,137 +631,6 @@ func TestOrderService_ConfirmOrder(t *testing.T) {
 			purchaseRepo.AssertExpectations(t)
 			providerRepo.AssertExpectations(t)
 		}
-	})
-}
-
-func TestOrderService_ConfirmOrder_AdditionalEdgeCases(t *testing.T) {
-	tests := []ConfirmOrderEdgeCase{
-		{
-			Name:                "successful order confirmation with status confirm",
-			OrderConfirmRequest: confirmReqVTLConfirm,
-			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1001", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1001").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLConfirm.OrderID, confirmReqVTLConfirm.UserID, confirmReqVTLConfirm.TotalPrice, confirmReqVTLConfirm.PhoneNumber, confirmReqVTLConfirm.CashBackValue, confirmReqVTLConfirm.SkuID, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrder.Status = model.PurchaseHistoryStatusConfirm // Already confirmed
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1001").Return(string(cachedOrderJSON), nil)
-			},
-			ExpectedError: "order already confirmed or failed",
-		},
-		{
-			Name:                "successful order confirmation with status failed",
-			OrderConfirmRequest: confirmReqMBFFailed,
-			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("MBF", "Mobifone"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1002", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1002").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqMBFFailed.OrderID, confirmReqMBFFailed.UserID, confirmReqMBFFailed.TotalPrice, confirmReqMBFFailed.PhoneNumber, confirmReqMBFFailed.CashBackValue, confirmReqMBFFailed.SkuID, "MBF", "Mobifone", model.CashBackTypeFixed, 1000)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1002").Return(string(cachedOrderJSON), nil)
-				purchaseRepo.On("CreatePurchaseHistory", mock.Anything, mock.MatchedBy(func(ph *model.PurchaseHistory) bool {
-					return ph.OrderID == confirmReqMBFFailed.OrderID && ph.UserID == confirmReqMBFFailed.UserID && ph.Status == model.PurchaseHistoryStatusFailed
-				})).Return(nil)
-				redis.On("Set", mock.Anything, "order_id1002", mock.AnythingOfType("[]uint8"), mock.AnythingOfType("time.Duration")).Return(nil)
-			},
-			ExpectedError: "",
-		},
-		{
-			Name:                "order mismatch - different user ID",
-			OrderConfirmRequest: confirmReqVTLUserMismatch,
-			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1006", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1006").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLUserMismatch.OrderID, 1, 10000, confirmReqVTLUserMismatch.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1006").Return(string(cachedOrderJSON), nil)
-			},
-			ExpectedError: "order mismatch",
-		},
-		{
-			Name:                "order mismatch - different total price",
-			OrderConfirmRequest: confirmReqVTLPriceMismatch,
-			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1007", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1007").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLPriceMismatch.OrderID, 1, 10000, confirmReqVTLPriceMismatch.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1007").Return(string(cachedOrderJSON), nil)
-			},
-			ExpectedError: "order mismatch",
-		},
-		{
-			Name:                "order status pending - invalid status transition",
-			OrderConfirmRequest: confirmReqVTLPending,
-			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1008", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1008").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLPending.OrderID, 1, 10000, confirmReqVTLPending.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1008").Return(string(cachedOrderJSON), nil)
-			},
-			ExpectedError: "order is pending",
-		},
-		{
-			Name:                "order already confirmed",
-			OrderConfirmRequest: confirmReqVTLAlreadyConfirmed,
-			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1009", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1009").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLAlreadyConfirmed.OrderID, 1, 10000, confirmReqVTLAlreadyConfirmed.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrder.Status = model.PurchaseHistoryStatusConfirm // Already confirmed
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1009").Return(string(cachedOrderJSON), nil)
-			},
-			ExpectedError: "order already confirmed or failed",
-		},
-		{
-			Name:                "database error during purchase history creation",
-			OrderConfirmRequest: confirmReqVTLDBError,
-			SetupMocks: func(skuRepo *mockRepo.SkuRepositoryMock, purchaseRepo *mockRepo.PurchaseHistoryRepositoryMock, redis *mockGrpc.RedisMock, providerRepo *mockRepo.ProviderRepositoryMock) {
-				providerRepo.On("GetProvidersWithSuppliers", mock.Anything).Return(util.SingleProvider("VTL", "Viettel"), nil)
-				redis.On("TryAcquireLock", mock.Anything, "1010", mock.AnythingOfType("time.Duration")).Return(nil)
-				redis.On("ReleaseLock", mock.Anything, "1010").Return(nil)
-				cachedOrder := util.CreateCachedOrderResponse(confirmReqVTLDBError.OrderID, 1, 10000, confirmReqVTLDBError.PhoneNumber, 500, 1, "VTL", "Viettel", model.CashBackTypePercentage, 5)
-				cachedOrderJSON, _ := json.Marshal(cachedOrder)
-				redis.On("Get", mock.Anything, "order_id1010").Return(string(cachedOrderJSON), nil)
-				purchaseRepo.On("CreatePurchaseHistory", mock.Anything, mock.MatchedBy(func(ph *model.PurchaseHistory) bool {
-					return ph.OrderID == confirmReqVTLDBError.OrderID && ph.UserID == confirmReqVTLDBError.UserID && ph.Status == model.PurchaseHistoryStatusConfirm
-				})).Return(errors.New("database connection failed"))
-			},
-			ExpectedError: "database connection failed",
-		},
-	}
-	runTableDrivenTests(t, tests, func(t *testing.T, tc ConfirmOrderEdgeCase) {
-		skuRepo := new(mockRepo.SkuRepositoryMock)
-		purchaseRepo := new(mockRepo.PurchaseHistoryRepositoryMock)
-		redis := new(mockGrpc.RedisMock)
-		grpcClients := &grpcClient.GRPCServiceClient{
-			ProviderGRPCClients: make(map[string]grpcClient.ProviderGRPCClient),
-		}
-		providerRepo := new(mockRepo.ProviderRepositoryMock)
-
-		tc.SetupMocks(skuRepo, purchaseRepo, redis, providerRepo)
-
-		orderService := service.NewOrderService(skuRepo, purchaseRepo, redis, *grpcClients, providerRepo)
-		err := orderService.ConfirmOrder(context.Background(), tc.OrderConfirmRequest)
-
-		if tc.ExpectedError != "" {
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), tc.ExpectedError)
-		} else {
-			assert.NoError(t, err)
-		}
-
-		skuRepo.AssertExpectations(t)
-		purchaseRepo.AssertExpectations(t)
-		redis.AssertExpectations(t)
-		providerRepo.AssertExpectations(t)
 	})
 }
 
